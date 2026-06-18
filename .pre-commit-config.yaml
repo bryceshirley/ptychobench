@@ -1,0 +1,12 @@
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ensure this matches the version of ruff in your environment, 
+    # or use 'v0.4.4' / a specific recent version tag.
+    rev: v0.4.4 
+    hooks:
+      # Run the linter.
+      - id: ruff
+        args: [ --fix ]
+      # Run the formatter.
+      - id: ruff-format
