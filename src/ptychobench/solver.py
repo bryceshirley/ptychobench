@@ -1,12 +1,12 @@
 # src/ptychobench/solver.py
 import numpy as np
 import logging
-from scipy.linalg import norm
 from typing import Callable, Type, Optional, Sequence
 from dataclasses import dataclass
 
 from ptychobench.grid import SimulationGrid
 from ptychobench.operators import ForwardOperator
+from ptychobench.metrics import calculate_rmse
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ def run_benchmark(
             if name == "Exact":
                 errors[name] = 0.0
             else:
-                errors[name] = norm(exact_data - data) / norm(exact_data)
+                errors[name] = calculate_rmse(exact_data.ravel(), data.ravel())
     else:
         logger.warning(
             "'Exact' key not found in operators. Skipping error calculation."
