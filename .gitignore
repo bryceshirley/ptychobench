@@ -20,3 +20,6 @@ src/*.egg-info/
 .DS_Store
 .vscode/
 .idea/
+
+# Ignore answer files
+*answer*.py
