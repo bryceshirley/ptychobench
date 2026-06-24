@@ -1,0 +1,38 @@
+# Project Information
+site_name: Ptychobench Documentation
+site_description: A 2D benchmarking suite for forward propagation operators in Ptychography.
+site_author: Bryce Shirley
+
+# Visual Theme
+theme:
+  name: material
+  palette:
+    scheme: slate # Gives a nice dark mode theme for students!
+    primary: indigo
+    accent: deep purple
+  features:
+    - navigation.tabs # Adds tabs to the top for a clean look
+    - navigation.sections
+
+# Add this to the bottom of mkdocs.yml
+markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - User Guides:
+      - Getting Started: quick_start.md
+      - Simulation Grid: simulation_grid.md
+      - Samples Guide: samples_guide.md
+      - Results Guide: results_guide.md
+  - References:
+      - Error Metrics: error_metrics.md
+      - Physics Simulation: physics_simulation.md
+      - Technical Theory: technical.md
