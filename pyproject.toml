@@ -8,6 +8,8 @@ dependencies = [
     "matplotlib",
     "ruff>=0.15.18",
     "numba>=0.65.1",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.6",
 ]
 requires-python = ">=3.10"
 
