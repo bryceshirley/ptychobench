@@ -23,4 +23,4 @@ def calculate_rmse(exact: np.ndarray, approx: np.ndarray) -> float:
     # Hints:
     #  - Use a standard 'for' loop to represent the summation formula.
     #  - Use the built-in abs() function to compute the absolute value ie |exact_i - approx_i|
-    pass
+    return 1.0  # Placeholder return value

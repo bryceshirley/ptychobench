@@ -4,9 +4,9 @@ In Ptychography, diffraction through a sample can be modeled by the forward Helm
 
 $$\frac{\partial \psi}{\partial z} + i k_0 Q \psi = 0$$
 
-where $Q$ is the pseudo-differential operator that depends on the sample's refractive index distribution perturbation ($E$) and the kinetic operator ($M$). The exact forward operator is defined as:
+where $Q$ is the pseudo-differential operator that depends on the sample's refractive index distribution perturbation ($\epsilon$) and the kinetic operator ($\mu$). The exact forward operator is defined as:
 
-$$Q = \sqrt{I + E + M} - I$$
+$$Q = \sqrt{I + \epsilon + \mu} - I$$
 
 The exponential solution to the forward propagation over a step size $dz$ is given by:
 
@@ -20,22 +20,18 @@ However, by restricting our simulation to 2D, we can directly evaluate the exact
 
 * **Q1 (Paraxial Approximation):** Assumes small scattering angles.
 
-$$Q_1 = \frac{1}{2}(E + M)$$
+$$Q_1 = \frac{1}{2}(\epsilon + \mu)$$
 
 
 * **Q2 (Feit/Fleck Split-Step):** Separates the kinetic and environmental components.
 
-$$Q_2 = L + N$$
+$$Q_2 = \mathcal{L} + \mathcal{N}$$
 
-
-
-*(where $L = \sqrt{I + M} - I$ and $N = \sqrt{I + E}$)*
+*(where $\mathcal{L} = \sqrt{I + \mu} - I$ and $\mathcal{N} = \sqrt{I + \epsilon} - I$)*
 * **Q3 (Lin/Duda):** Improves upon Feit/Fleck by explicitly subtracting the first-order commutation error.
 
-$$Q_3 = Q_2 - \frac{1}{2}(LN + NL)$$
+$$Q_3 = Q_2 - \frac{1}{2}(\mathcal{LN} + \mathcal{NL})$$
 
-
-* **Padé Approximations:** Rational approximations to the exact operator, such as the $[1/1]$ and $[2/2]$ expansions.
 
 *This framework allows us to rigorously test the accuracy of these approximations across different sample geometries, refractive index perturbations, and beam divergence angles.*
 
