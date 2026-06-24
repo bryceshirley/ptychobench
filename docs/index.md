@@ -7,8 +7,11 @@ Welcome to `ptychobench`, a research-focused simulation suite for 2D ptychograph
 This is not just about writing code; it is about learning how to conduct **Reproducible Research**.
 
 Throughout this week, you will learn to manage the entire Research Software Engineering (RSE) lifecycle:
+
 1. **Software Engineering:** Using Git, TDD, and CI/CD to ensure your work is reliable.
+
 2. **Benchmarking:** Running benchmarks to explore complex physical systems.
+
 3. **Communication:** Documenting and presenting your findings so they have an impact.
 
 ---

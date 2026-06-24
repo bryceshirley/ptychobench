@@ -36,7 +36,7 @@ In this simulation, your goal is to test three of these shortcuts to see when th
 
 ---
 
-## 3. Why our 2D Sandbox is Special
+## 3. Why We Can Test These Shortcuts in 2D
 
 Normally, it is impossible to know exactly how much "error" these shortcuts are making because calculating the Exact answer in 3D is too hard.
 
