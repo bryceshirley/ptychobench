@@ -30,6 +30,7 @@ and building the documentation locally.
 
 ### References
 * **[Error Metrics](error_metrics.md):** Definitions and mathematical formulas for the RMSE metric.
+* **[Testing Error Metrics](testing_error_metrics.md):** A explanation of how we tested the error metrics.
 * **[Physics Simulation](physics_simulation.md):** An explanation of the physics simulation and the approximations being tested.
 * **[Technical Theory](technical.md):** A technical overview of the underlying mathematics.
 

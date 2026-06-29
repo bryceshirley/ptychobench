@@ -34,5 +34,6 @@ nav:
       - Results Guide: results_guide.md
   - References:
       - Error Metrics: error_metrics.md
+      - Testing Error Metrics: testing_error_metrics.md
       - Physics Simulation: physics_simulation.md
       - Technical Theory: technical.md
