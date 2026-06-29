@@ -4,6 +4,7 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
+from matplotlib import pyplot as plt
 
 
 # ==========================================
@@ -116,6 +117,56 @@ class Sample(ABC):
     def get_permittivity(self, grid, z: float) -> np.ndarray:
         """Returns the 1D complex permittivity array for a specific z-slice."""
         pass
+
+    def plot(self, grid):
+        """Compute and plot modulus and phase of the sample."""
+        Nz = grid.Nz
+        Nx = grid.N
+
+        # Build sample on-the-fly
+        sample_history = np.zeros((Nz, Nx), dtype=np.complex128)
+
+        for i, z in enumerate(grid.z_steps):
+            sample_history[i, :] = self.get_permittivity(grid, z)
+
+        extent = [
+            grid.x[0],
+            grid.x[-1],
+            grid.z_steps[0],
+            grid.z_steps[-1],
+        ]
+
+        fig, (ax_real, ax_imag) = plt.subplots(1, 2, figsize=(12, 6), sharey=True)
+
+        # Modulus
+        im_real = ax_real.imshow(
+            np.abs(sample_history),
+            extent=extent,
+            aspect="auto",
+            cmap="viridis",
+            origin="upper",
+        )
+        ax_real.set_title("Modulus of Sample")
+        ax_real.set_xlabel("Transverse coordinate x")
+        ax_real.set_ylabel("Propagation distance z")
+        fig.colorbar(im_real, ax=ax_real)
+
+        # Phase
+        im_imag = ax_imag.imshow(
+            np.unwrap(np.angle(sample_history), axis=1),
+            extent=extent,
+            aspect="auto",
+            cmap="plasma",
+            origin="upper",
+        )
+        ax_imag.set_title("Phase of Sample (radians)")
+        ax_imag.set_xlabel("Transverse coordinate x")
+        fig.colorbar(im_imag, ax=ax_imag)
+
+        fig.suptitle("Refractive Index Environment")
+
+        plt.tight_layout()
+        plt.show()
 
 
 @dataclass

@@ -29,4 +29,4 @@ for sample_class in [
     result = run_benchmark(grid, sample, operators)
 
     # 5. Generate Plots and Save Results
-    result.generate_plots()
+    result.generate_report()

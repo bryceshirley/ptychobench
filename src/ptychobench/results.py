@@ -50,7 +50,8 @@ class BenchmarkResult:
         # Sort errors so the smallest error is at the top
         sorted_errors = sorted(self.errors.items(), key=lambda item: item[1])
         for name, err in sorted_errors:
-            print(f"  {name:<20}: {err:.6e}")
+            if name != "ExactOperator":
+                print(f"  {name:<20}: {err:.6e}")
         print("-" * 45)
 
     def get_error(self, operator_name: str) -> float:
@@ -61,7 +62,119 @@ class BenchmarkResult:
         """Returns the dictionary of errors for external analysis."""
         return self.errors
 
-    def generate_plots(self, save_dir: str = "results"):
+    def plot_sample(self):
+        """Plots the samples refractive index"""
+        grid = self.grid
+        extent = [-grid.L / 2, grid.L / 2, grid.z_prop, 0]
+
+        fig_env, (ax_real, ax_imag) = plt.subplots(1, 2, figsize=(12, 6), sharey=True)
+
+        im_real = ax_real.imshow(
+            np.abs(self.sample_history), extent=extent, aspect="auto", cmap="viridis"
+        )
+        ax_real.set_title(r"Modulus of Sample", fontsize=14)
+        ax_real.set_xlabel("Transverse coordinate x", fontsize=12)
+        ax_real.set_ylabel("Propagation Distance z", fontsize=12)
+        fig_env.colorbar(im_real, ax=ax_real)
+
+        im_imag = ax_imag.imshow(
+            np.unwrap(np.angle(self.sample_history)),
+            extent=extent,
+            aspect="auto",
+            cmap="plasma",
+        )
+        ax_imag.set_title(r"Phase of Sample (radians)", fontsize=14)
+        ax_imag.set_xlabel("Transverse coordinate x", fontsize=12)
+        fig_env.colorbar(im_imag, ax=ax_imag)
+
+        fig_env.suptitle("Refractive Index Environment", fontsize=16)
+        return fig_env
+
+    def plot_wavefields(self):
+        """Plots the propagated wavefields (phase and amplitude) for each operator."""
+        grid = self.grid
+        extent = [-grid.L / 2, grid.L / 2, grid.z_prop, 0]
+
+        # 2. 2D Field Propagation (Phase and Amplitude)
+        n_ops = len(self.wavefield_history)
+        fig_p, axes_p = plt.subplots(1, n_ops, figsize=(6 * n_ops, 6), sharey=True)
+        fig_a, axes_a = plt.subplots(1, n_ops, figsize=(6 * n_ops, 6), sharey=True)
+
+        if n_ops == 1:
+            axes_p, axes_a = [axes_p], [axes_a]
+
+        for i, (name, data) in enumerate(self.wavefield_history.items()):
+            im_p = axes_p[i].imshow(
+                np.angle(data), extent=extent, aspect="auto", cmap="magma"
+            )
+            axes_p[i].set_title(name, fontsize=14)
+            axes_p[i].set_xlabel("Transverse coordinate x", fontsize=12)
+
+            im_a = axes_a[i].imshow(
+                np.abs(data), extent=extent, aspect="auto", cmap="magma"
+            )
+            axes_a[i].set_title(name, fontsize=14)
+            axes_a[i].set_xlabel("Transverse coordinate x", fontsize=12)
+
+        axes_p[0].set_ylabel("Propagation Distance z", fontsize=12)
+        fig_p.colorbar(im_p, ax=axes_p, fraction=0.02, pad=0.02)
+        fig_p.suptitle("2D Field Propagation (Phase)", fontsize=16)
+
+        axes_a[0].set_ylabel("Propagation Distance z", fontsize=12)
+        fig_a.colorbar(im_a, ax=axes_a, fraction=0.02, pad=0.02)
+        fig_a.suptitle("2D Field Propagation (Amplitude)", fontsize=16)
+
+        return fig_p, fig_a
+
+    def plot_evolution_1D(self):
+        """Plots the evolution of the wavefield along the propagation direction at the center of the grid."""
+        grid = self.grid
+        styles = ["m-", "r--", "g-", "b-.", "c:", "y--", "C0-"]
+        mid_index = grid.N // 2  # Middle index for x
+
+        # Helper for 1D line plots
+        def _plot_1d_comparison(data_extractor, x_axis, xlabel, ylabel, title):
+            fig = plt.figure(figsize=(10, 6))
+
+            style_idx = 0
+            for name, data in self.wavefield_history.items():
+                y_data = data_extractor(data)
+
+                if name == "Exact":
+                    plt.plot(x_axis, y_data, "k-", linewidth=4, alpha=0.3, label=name)
+                else:
+                    style = styles[style_idx % len(styles)]
+                    plt.plot(x_axis, y_data, style, linewidth=2, label=name)
+                    style_idx += 1
+
+            plt.title(title, fontsize=14)
+            plt.xlabel(xlabel, fontsize=12)
+            plt.ylabel(ylabel, fontsize=12)
+            plt.legend(fontsize=11, loc="best")
+            plt.grid(True, linestyle="--", alpha=0.7)
+            plt.tight_layout()
+            return fig
+
+        # 3. 1D Cross Sections
+        fig1 = _plot_1d_comparison(
+            lambda d: np.angle(d[:, mid_index]),
+            grid.z_steps,
+            "Propagation Distance z",
+            "Phase (radians)",
+            f"Phase Evolution along z at x = {grid.x[mid_index]:.2f}",
+        )
+
+        fig2 = _plot_1d_comparison(
+            lambda d: np.abs(d[:, mid_index]),
+            grid.z_steps,
+            "Propagation Distance z",
+            r"Amplitude $|\psi|$",
+            f"Amplitude Evolution along z at x = {grid.x[mid_index]:.2f}",
+        )
+
+        return fig1, fig2
+
+    def generate_report(self, save_dir: str = "results"):
         """
         Generates all 2D and 1D plots based on the simulation results.
         Creates a time-stamped sub-directory to prevent overwriting old runs.
@@ -105,7 +218,7 @@ class BenchmarkResult:
         # 3. Output the Quantitative Errors (Console and separate File)
         error_lines = [f"--- Propagated Field Errors at z = {grid.z_prop} (RMSE) ---"]
         for name, error in self.errors.items():
-            if name != "Exact":
+            if name != "ExactOperator":
                 error_lines.append(f"{name:<18}: {error:.6e}")
 
         error_file = save_path / "quantitative_errors.txt"
@@ -114,126 +227,35 @@ class BenchmarkResult:
         # Log the errors cleanly to the console
         logger.info(f"Propagated Field Errors at z = {grid.z_prop} (RMSE):")
         for name, error in self.errors.items():
-            if name != "Exact":
+            if name != "ExactOperator":
                 logger.info(f"  {name:<18}: {error:.6e}")
 
         # 4. Generate Visuals
         logger.info(f"Generating plots in '{save_path}'...")
 
-        extent = [-grid.L / 2, grid.L / 2, grid.z_prop, 0]
-        mid_index = grid.N // 2
-        styles = ["m-", "r--", "g-", "b-.", "c:", "y--", "C0-"]
-
-        # ==========================================
-        # 1. Refractive Index Environment (Epsilon)
-        # ==========================================
-        fig_env, (ax_real, ax_imag) = plt.subplots(1, 2, figsize=(12, 6), sharey=True)
-
-        im_real = ax_real.imshow(
-            np.abs(self.sample_history), extent=extent, aspect="auto", cmap="viridis"
-        )
-        ax_real.set_title(r"Modulus of Sample", fontsize=14)
-        ax_real.set_xlabel("Transverse coordinate x", fontsize=12)
-        ax_real.set_ylabel("Propagation Distance z", fontsize=12)
-        fig_env.colorbar(im_real, ax=ax_real)
-
-        im_imag = ax_imag.imshow(
-            np.unwrap(np.angle(self.sample_history)),
-            extent=extent,
-            aspect="auto",
-            cmap="plasma",
-        )
-        ax_imag.set_title(r"Phase of Sample (radians)", fontsize=14)
-        ax_imag.set_xlabel("Transverse coordinate x", fontsize=12)
-        fig_env.colorbar(im_imag, ax=ax_imag)
-
-        fig_env.suptitle("Refractive Index Environment", fontsize=16)
+        # Plot the sample's refractive index environment (modulus and phase)
+        fig_env = self.plot_sample()
         fig_env.savefig(
             save_path / f"{self.sample_name}.png", dpi=300, bbox_inches="tight"
         )
         plt.close(fig_env)
 
-        # 2. 2D Field Propagation (Phase and Amplitude)
-        n_ops = len(self.wavefield_history)
-        fig_p, axes_p = plt.subplots(1, n_ops, figsize=(6 * n_ops, 6), sharey=True)
-        fig_a, axes_a = plt.subplots(1, n_ops, figsize=(6 * n_ops, 6), sharey=True)
-
-        if n_ops == 1:
-            axes_p, axes_a = [axes_p], [axes_a]
-
-        for i, (name, data) in enumerate(self.wavefield_history.items()):
-            im_p = axes_p[i].imshow(
-                np.angle(data), extent=extent, aspect="auto", cmap="magma"
-            )
-            axes_p[i].set_title(name, fontsize=14)
-            axes_p[i].set_xlabel("Transverse coordinate x", fontsize=12)
-
-            im_a = axes_a[i].imshow(
-                np.abs(data), extent=extent, aspect="auto", cmap="magma"
-            )
-            axes_a[i].set_title(name, fontsize=14)
-            axes_a[i].set_xlabel("Transverse coordinate x", fontsize=12)
-
-        axes_p[0].set_ylabel("Propagation Distance z", fontsize=12)
-        fig_p.colorbar(im_p, ax=axes_p, fraction=0.02, pad=0.02)
-        fig_p.suptitle("2D Field Propagation (Phase)", fontsize=16)
-        fig_p.savefig(
-            save_path / "propagated_fields_2D_phase.png", dpi=300, bbox_inches="tight"
-        )
-
-        axes_a[0].set_ylabel("Propagation Distance z", fontsize=12)
-        fig_a.colorbar(im_a, ax=axes_a, fraction=0.02, pad=0.02)
-        fig_a.suptitle("2D Field Propagation (Amplitude)", fontsize=16)
+        # Plot the propagated wavefields (phase and amplitude) for each operator
+        fig_p, fig_a = self.plot_wavefields()
         fig_a.savefig(
             save_path / "propagated_fields_2D_amp.png", dpi=300, bbox_inches="tight"
         )
-
+        fig_p.savefig(
+            save_path / "propagated_fields_2D_phase.png", dpi=300, bbox_inches="tight"
+        )
         plt.close(fig_p)
         plt.close(fig_a)
 
-        # Helper for 1D line plots
-        def _plot_1d_comparison(
-            data_extractor, x_axis, xlabel, ylabel, title, filename
-        ):
-            fig = plt.figure(figsize=(10, 6))
-
-            style_idx = 0
-            for name, data in self.wavefield_history.items():
-                y_data = data_extractor(data)
-
-                if name == "Exact":
-                    plt.plot(x_axis, y_data, "k-", linewidth=4, alpha=0.3, label=name)
-                else:
-                    style = styles[style_idx % len(styles)]
-                    plt.plot(x_axis, y_data, style, linewidth=2, label=name)
-                    style_idx += 1
-
-            plt.title(title, fontsize=14)
-            plt.xlabel(xlabel, fontsize=12)
-            plt.ylabel(ylabel, fontsize=12)
-            plt.legend(fontsize=11, loc="best")
-            plt.grid(True, linestyle="--", alpha=0.7)
-            plt.tight_layout()
-            fig.savefig(save_path / filename, dpi=300)
-            plt.close(fig)
-
-        # 3. 1D Cross Sections
-        _plot_1d_comparison(
-            lambda d: np.angle(d[:, mid_index]),
-            grid.z_steps,
-            "Propagation Distance z",
-            "Phase (radians)",
-            f"Phase Evolution along z at x = {grid.x[mid_index]:.2f}",
-            "phase_evolution_1D.png",
-        )
-
-        _plot_1d_comparison(
-            lambda d: np.abs(d[:, mid_index]),
-            grid.z_steps,
-            "Propagation Distance z",
-            r"Amplitude $|\psi|$",
-            f"Amplitude Evolution along z at x = {grid.x[mid_index]:.2f}",
-            "amplitude_evolution_1D.png",
-        )
+        # Plot the evolution of the wavefield along the propagation direction at the center of the grid
+        fig1, fig2 = self.plot_evolution_1D()
+        fig1.savefig(save_path / "phase_evolution_1D.png", dpi=300)
+        fig2.savefig(save_path / "amplitude_evolution_1D.png", dpi=300)
+        plt.close(fig1)
+        plt.close(fig2)
 
         logger.info("Plotting complete.")

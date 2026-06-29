@@ -1,7 +1,7 @@
 # src/ptychobench/solver.py
 import numpy as np
 import logging
-from typing import Type, Sequence
+from typing import Type, Sequence, Union
 
 from ptychobench.grid import SimulationGrid
 from ptychobench.operators import ForwardOperator, ExactOperator
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 def run_benchmark(
     grid: SimulationGrid,
     sample: Sample,
-    operators: Sequence[Type[ForwardOperator]],
+    operators: Union[Sequence[Type[ForwardOperator]], Type[ForwardOperator]],
 ) -> BenchmarkResult:
     """
     Runs the main z-propagation loop for all provided operators.
@@ -24,7 +24,11 @@ def run_benchmark(
     logger.info(f"Running benchmark for sample: {sample.__class__.__name__}")
 
     # --- 1. Initialization & Dependency Injection ---
-    op_classes = list(operators)
+    if isinstance(operators, (list, tuple, set)):
+        op_classes = list(operators)
+    else:
+        op_classes = [operators]
+
     if ExactOperator not in op_classes:
         op_classes.append(ExactOperator)
 

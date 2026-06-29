@@ -62,16 +62,16 @@ Errors (RMSE relative to ExactOperator):
 
 ---
 
-## 2. Generating Plots and Saving Results
+## 2. Plotting and Saving Results
 
-The result object comes with `generate_plots()` method that builds a experimental report.
+The result object comes with `generate_report()` method that builds a experimental report.
 
 ```python
 # Create a timestamped folder with all graphs and logs
-result.generate_plots()
+result.generate_report()
 
 # Or specify a custom directory:
-result.generate_plots(save_dir="my_results_folder")
+result.generate_report(save_dir="my_results_folder")
 ```
 
 When you call this method, it creates a new time-stamped folder (e.g., `results/run_ZigBalls_2026-06-24_14-30-00/`) to ensure you never accidentally overwrite old data.
@@ -84,6 +84,29 @@ When you call this method, it creates a new time-stamped folder (e.g., `results/
 * `propagated_fields_2D_phase.png`: A side-by-side comparison of the 2D phase wavefields for all operators.
 * `propagated_fields_2D_amp.png`: A side-by-side comparison of the 2D amplitude wavefields.
 * `phase_evolution_1D.png` & `amplitude_evolution_1D.png`: 1D line graphs showing how the wavefield evolves precisely down the center of the grid.
+
+### 2.1 Plotting
+
+#### Example: Plotting the 2D Wavefield Evolution
+
+```python
+# Plot the 2D phase and amplitude evolution of the wavefield for all operators
+result.plot_wavefields()
+```
+
+#### Example: Plotting the 1D Wavefield Evolution
+
+```python
+# Plot the 1D phase and amplitude evolution of the wavefield along the center of the grid
+result.plot_evolution_1D()
+```
+
+#### Example: Plotting the Sample Structure
+
+```python
+# Plot the 2D structure of the sample (modulus and phase)
+result.plot_sample()
+```
 
 ---
 
