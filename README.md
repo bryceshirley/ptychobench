@@ -1,4 +1,4 @@
-# Ptychobench Work Exparionce
+# Ptychobench Work Experience
 
 Benchmarking forward-propagation operators for Thick Sample Ptychography Imaging. Your task: build, test, and generate convergence plots to evaluate where mathematical approximations break down.
 
