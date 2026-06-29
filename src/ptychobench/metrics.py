@@ -25,11 +25,11 @@ def calculate_rmse(exact: np.ndarray, approx: np.ndarray) -> float:
     #  - Use a standard 'for' loop to represent the summation formula.
     #  - Use the built-in abs() function to compute the absolute value ie |exact_i - approx_i|
     # return 1.0  # Placeholder return value
-    sum = 0
+    total = 0
     for idx in range(N):
         x = exact[idx]
         y = approx[idx]
-        sum += abs(x - y) ** 2
-    sum /= N
+        total += abs(x - y) ** 2
+    total /= N
 
-    return np.sqrt(sum)
+    return np.sqrt(total)
