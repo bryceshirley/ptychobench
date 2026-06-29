@@ -33,6 +33,9 @@ Good code doesn't just calculate the right answer; it handles bad inputs safely
 by raising clear errors.
 """
 
+from ptychobench.metrics import calculate_rmse
+import numpy as np
+
 
 def test_rmse_identical_arrays():
     """
@@ -40,11 +43,9 @@ def test_rmse_identical_arrays():
     If the exact array and the approximation array are perfectly identical,
     the error must be exactly 0.0.
     """
-    # TODO (Student A):
-    # 1. Arrange: Create two identical numpy arrays.
-    # 2. Act: Pass them to calculate_rmse().
-    # 3. Assert: Check that the error is exactly 0.0.
-    pass
+    exact = np.array([1, 2, 3])
+    approx = np.array([1, 2, 3])
+    assert 0.0 == calculate_rmse(exact, approx)
 
 
 def test_rmse_known_real_difference():
@@ -52,12 +53,11 @@ def test_rmse_known_real_difference():
     TDD STEP 2: The Hand-Calculated Test.
     Use simple real numbers that can be calculated on a piece of paper.
     """
-    # TODO (Student B):
-    # 1. Arrange: Create an 'exact' and an 'approx'.
-    # 2. Arrange: Calculate what the RMSE *should* be by hand.
-    # 3. Act: Pass them to calculate_rmse().
-    # 4. Assert: Check that the error equals your hand-calculated value.
-    pass
+    list_x = np.array([4.0, 4.0, 2.0])
+    list_y = np.array([2.0, 6.0, 0.0])
+    # assert len(list_x) == len(list_y)
+    print(calculate_rmse(list_x, list_y))
+    assert 2.0 == calculate_rmse(list_x, list_y)
 
 
 # ------------------------------------------------------------------------------

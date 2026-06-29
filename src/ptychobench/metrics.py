@@ -17,10 +17,19 @@ def calculate_rmse(exact: np.ndarray, approx: np.ndarray) -> float:
         float: The calculated error.
     """
     # Get the number of elements in the arrays
-    # N = exact.size
+    N = exact.size
+    # N = exact.__len__()
 
     # TODO: Students to implement this using Ping-Pong TDD!
     # Hints:
     #  - Use a standard 'for' loop to represent the summation formula.
     #  - Use the built-in abs() function to compute the absolute value ie |exact_i - approx_i|
-    return 1.0  # Placeholder return value
+    # return 1.0  # Placeholder return value
+    sum = 0
+    for idx in range(N):
+        x = exact[idx]
+        y = approx[idx]
+        sum += abs(x - y) ** 2
+    sum /= N
+
+    return np.sqrt(sum)
