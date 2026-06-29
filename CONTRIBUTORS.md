@@ -9,3 +9,4 @@ Thank you to everyone who has contributed to the `ptychobench` project!
 
 - Bryce Shirley (@bryceshirley)
 - lizard (Tiko)
+- L (@l)
