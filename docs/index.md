@@ -29,6 +29,7 @@ and building the documentation locally.
 * **[Results Guide](results_guide.md):** Learn how to extract and analyse the results of your simulations and generate plots.
 
 ### References
+* **[Markdown Cheat Sheet](using_markdown.md):** A quick reference for Markdown syntax.
 * **[Error Metrics](error_metrics.md):** Definitions and mathematical formulas for the RMSE metric.
 * **[Testing Error Metrics](testing_error_metrics.md):** A explanation of how we tested the error metrics.
 * **[Physics Simulation](physics_simulation.md):** An explanation of the physics simulation and the approximations being tested.

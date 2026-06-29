@@ -33,6 +33,7 @@ nav:
       - Samples Guide: samples_guide.md
       - Results Guide: results_guide.md
   - References:
+      - Markdown Cheat Sheet: using_markdown.md
       - Error Metrics: error_metrics.md
       - Testing Error Metrics: testing_error_metrics.md
       - Physics Simulation: physics_simulation.md
