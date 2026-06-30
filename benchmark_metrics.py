@@ -1,18 +1,20 @@
 from ptychobench.metrics import calculate_rmse
 import time
-import random
 import numpy as np
+
 
 def benchmark_metrics_python():
     njit_time = 0
     no_njit_time = 0
     COUNT = 100000
-    x = [random.randint(0, 10000) for _ in range(COUNT)]
-    y = [random.randint(0, 10000) for _ in range(COUNT)]
+    x = np.random.randint(0, 1000, COUNT)
+    y = np.random.randint(0, 1000, COUNT)
 
     N = 10
 
-    for _ in  range(N):
+    calculate_rmse(x, y)
+    calculate_rmse_no_njit(x, y)
+    for _ in range(N):
         start = time.time()
         calculate_rmse(x, y)
         benchmark = time.time() - start
@@ -31,6 +33,7 @@ def benchmark_metrics_python():
     no_njit_time /= N
     print(f"NJIT Time:\t{njit_time}")
     print(f"No NJIT Time:\t{no_njit_time}")
+
 
 def calculate_rmse_no_njit(exact, approx) -> float:
     """
@@ -62,6 +65,7 @@ def calculate_rmse_no_njit(exact, approx) -> float:
     sum /= N
 
     return np.sqrt(sum)
+
 
 # if __name__ == "main":
 benchmark_metrics_python()
