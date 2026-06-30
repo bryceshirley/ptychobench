@@ -17,7 +17,7 @@ def calculate_rmse(exact: np.ndarray, approx: np.ndarray) -> float:
         float: The calculated error.
     """
     # Get the number of elements in the arrays
-    N = exact.size
+    N = len(exact)
     # N = exact.__len__()
 
     # TODO: Students to implement this using Ping-Pong TDD!
