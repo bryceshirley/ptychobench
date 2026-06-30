@@ -4,7 +4,7 @@
 
 RMSE is a metric used to understand how accurate our calculated results are to the true value. As the name implies, it is the root of the mean of the squared difference of all values in the actual and exact lists. 
 
-$$\sqrt{\frac{1}{N} \sum_{i=0}^{N - 1} {x_i - y_i}^2}$$
+$$\sqrt{\frac{1}{N} \sum_{i=0}^{N - 1} {(x_i - y_i)}^2}$$
 
 ## Worked Example
 
@@ -12,7 +12,7 @@ Say our exact values that we are trying to measure are $[2,2,2,2]$, but what we 
 
 Because our measured results are off, we want to find out the error, which we can do using the error metric: 'RMSE'.
 
-$$\sqrt{\frac{1}{N} \sum_{i=0}^{N - 1} {x_i - y_i}^2}$$
+$$\sqrt{\frac{1}{N} \sum_{i=0}^{N - 1} {(x_i - y_i)}^2}$$
 
 To go through this formula in steps, we can first find the differences between the exact and actual values.
 
