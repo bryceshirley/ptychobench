@@ -24,4 +24,8 @@ src/*.egg-info/
 # Ignore answer files
 *answer*.py
 
+# Ignore powerpoint
 *.pptx
+
+# Ignore notebook files
+*.ipynb
