@@ -14,7 +14,7 @@ def grating_function(wavelength, angle):
 
     plt.subplot(121)
     plt.imshow(grating)
-    plt.title(f"Original Sine Function\n frequency = {1/wavelength}, Angle = {angle}")
+    plt.title(f"Original Sine Function\n frequency = {1 / wavelength}, Angle = {angle}")
     plt.xticks([])
     plt.yticks([])
 
