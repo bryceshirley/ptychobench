@@ -33,7 +33,11 @@ Good code doesn't just calculate the right answer; it handles bad inputs safely
 by raising clear errors.
 """
 
-from ptychobench.metrics import calculate_rmse
+from ptychobench.metrics import (
+    calculate_rmse,
+    calculate_farfield_intensity,
+    calculate_rmse_intensity,
+)
 import numpy as np
 
 
@@ -67,3 +71,24 @@ def test_rmse_known_real_difference():
 # Error assertions look like this:
 # with pytest.raises(ValueError):
 #      calculate_rmse(exact, approx)
+
+
+def test_calculate_rmse_intensity_identical_arrays():
+    list = np.array([8.0, 16.0, 22.0])
+    assert 0.0 == calculate_rmse_intensity(list, list)
+
+
+def test_zero_intensity():
+    list = np.array([0.0, 0.0, 0.0])
+    assert 0.0 == sum(calculate_farfield_intensity(list))
+
+
+def test_calculate_rmse_intensity_error():
+    list_x = np.array([8.0, 16.0, 22.0])
+    list_y = np.array([8.0, 12.0, 120.0])
+    assert calculate_rmse_intensity(list_x, list_y) > 0.0
+
+
+def test_non_zero_intensity():
+    list_x = np.array([8.0, 16.0, 22.0])
+    assert sum(calculate_farfield_intensity(list_x)) > 0.0
