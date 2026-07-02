@@ -33,3 +33,25 @@ def calculate_rmse(exact: np.ndarray, approx: np.ndarray) -> float:
     total /= N
 
     return np.sqrt(total)
+
+
+def calculate_rmse_intensity(exact: np.ndarray, approx: np.ndarray) -> float:
+    """
+    Calculates the Root Mean Square Error (RMSE) between the intensity of the exit wave of the exact and approximate.
+    """
+    exact_intensity = calculate_farfield_intensity(exact)
+    approx_intensity = calculate_farfield_intensity(approx)
+    return calculate_rmse(exact_intensity, approx_intensity)
+
+
+def calculate_farfield_intensity(exit_wave: np.ndarray):
+    """
+    Calculates the intensity of the exitwave by propagating the exitwave to the far field using a Fourier transform
+    """
+    # Propagate an exitwave to the far field using a Fourier transform
+    # (FFT = Fast Fourier Transform Algorithm)
+    farfield_wave = np.fft.fft(exit_wave)
+
+    intensity = np.abs(farfield_wave) ** 2
+
+    return intensity
