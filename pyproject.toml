@@ -10,6 +10,7 @@ dependencies = [
     "numba>=0.65.1",
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.7.6",
+    "scikit-image>=0.25.2",
 ]
 requires-python = ">=3.10"
 
