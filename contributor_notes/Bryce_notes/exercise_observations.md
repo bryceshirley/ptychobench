@@ -22,7 +22,7 @@ core_width  : 1.5
 ```
 The intensity error is worse at the edges of the sample.
 
-![intensity_error](/contributor_notes/Bryce_notes/run_StraightWaveguides_2026-06-30_15-22-16/intensity_error.png)
+![intensity_error](/contributor_notes/Bryce_notes/intensity_error.png)
 
 # Apoferritin Sample
 
