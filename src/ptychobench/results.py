@@ -126,8 +126,10 @@ class BenchmarkResult:
 
         return fig_p, fig_a
 
-    def plot_evolution_1D(self, plot_line=0.5):  # middle index for x
-        """Plots the evolution of the wavefield along the propagation direction at the center of the grid."""
+    def plot_evolution_1D(self, plot_line=0.5):
+        """plot_line : float
+        Plots the evolution of the wavefield along the propagation direction at different areas of the grid. automatically sets parameter to 0.5 (center) can be adjusted by user input to values between 0 and 1."""
+
         grid = self.grid
         styles = ["m-", "r--", "g-", "b-.", "c:", "y--", "C0-"]
         mid_index = grid.N * plot_line  # index for x
