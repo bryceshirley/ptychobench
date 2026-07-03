@@ -126,11 +126,14 @@ class BenchmarkResult:
 
         return fig_p, fig_a
 
-    def plot_evolution_1D(self):
+    def plot_evolution_1D(self, plot_line=0.5):  # middle index for x
         """Plots the evolution of the wavefield along the propagation direction at the center of the grid."""
         grid = self.grid
         styles = ["m-", "r--", "g-", "b-.", "c:", "y--", "C0-"]
-        mid_index = grid.N // 2  # Middle index for x
+        mid_index = grid.N * plot_line  # index for x
+        mid_index = int(mid_index)
+        if plot_line > 1.0 or plot_line < 0.0:
+            assert False
 
         # Helper for 1D line plots
         def _plot_1d_comparison(data_extractor, x_axis, xlabel, ylabel, title):
