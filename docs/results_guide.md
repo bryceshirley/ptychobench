@@ -114,6 +114,15 @@ result.plot_sample()
 
 ```
 
+#### Example: Plotting the Error Across the Farfield
+
+Assumes the Exact operator has been used.
+
+```python
+# Plot the error at the farfield for each of the operators
+result.plot_farfield_error()
+```
+
 ---
 
 ## 3. Accessing Errors
