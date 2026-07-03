@@ -126,17 +126,16 @@ class BenchmarkResult:
 
         return fig_p, fig_a
 
-    def plot_evolution_1D(self, plot_line = 0.5): 
+    def plot_evolution_1D(self, plot_line=0.5):
         """plot_line : float
-    Plots the evolution of the wavefield along the propagation direction at different areas of the grid. automatically sets parameter to 0.5 (center) can be adjusted by user input to values between 0 and 1."""
-      
+        Plots the evolution of the wavefield along the propagation direction at different areas of the grid. automatically sets parameter to 0.5 (center) can be adjusted by user input to values between 0 and 1."""
+
         grid = self.grid
         styles = ["m-", "r--", "g-", "b-.", "c:", "y--", "C0-"]
-        mid_index = grid.N * plot_line #index for x
-        mid_index = int(mid_index) 
+        mid_index = grid.N * plot_line  # index for x
+        mid_index = int(mid_index)
         if plot_line > 1.0 or plot_line < 0.0:
             assert False
-
 
         # Helper for 1D line plots
         def _plot_1d_comparison(data_extractor, x_axis, xlabel, ylabel, title):
