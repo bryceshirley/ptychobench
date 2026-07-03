@@ -11,6 +11,7 @@ dependencies = [
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.7.6",
     "scikit-image>=0.25.2",
+    "ipympl>=0.10.0",
 ]
 requires-python = ">=3.10"
 
