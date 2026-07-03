@@ -1,5 +1,6 @@
 from ptychobench.grid import SimulationGrid
 from ptychobench.samples import (
+    Sample,
     Apoferritin,
     StraightWaveguides,
     ZigWaveguides,
@@ -15,7 +16,6 @@ from ptychobench.benchmark import run_benchmark
 from matplotlib import pyplot as plt
 import numpy as np
 
-# Toggle between always generating new test results and using saved script data if they exist
 NEW_TESTS = True
 # NEW_TESTS = False
 
@@ -23,9 +23,6 @@ moduli_1 = [0.1, 0.5, 1.0, 1.5, 2.0]
 moduli_2 = [0.1, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
 moduli = moduli_2
 
-# Each tuple is a test with the format:
-# (divergence_angle, modulus, period, core_width, sample_idx)
-# period and core_width may be None for samples that do not have them as
 tests_1 = [
     (0.1, moduli[0], None, None, 0),
     (0.1, moduli[1], None, None, 0),
@@ -57,36 +54,28 @@ errors_lin_duda = []
 
 def do_tests():
     for test in tests:
+        # for test in tests[21:23]:
         print(test)
         divergence_angle = test[0]
         modulus = test[1]
         period = test[2]
         core_width = test[3]
-        sample = SAMPLES[test[4]]
+        sample: Sample = SAMPLES[test[4]]
 
         grid = SimulationGrid(divergence_angle=divergence_angle)
 
         if period is not None and core_width is not None:
-            sample = sample(
-                modulus=modulus,
-                period=period,  # ty:ignore[unknown-argument]
-                core_width=core_width,  # ty:ignore[unknown-argument]
-            )
+            sample = sample(modulus=modulus, period=period, core_width=core_width)
         elif period is not None:
-            sample = sample(
-                modulus=modulus,
-                period=period,  # ty:ignore[unknown-argument]
-            )
+            sample = sample(modulus=modulus, period=period)
         elif core_width is not None:
-            sample = sample(
-                modulus=modulus,
-                core_width=core_width,  # ty:ignore[unknown-argument]
-            )
+            sample = sample(modulus=modulus, core_width=core_width)
         else:
             sample = sample(modulus=modulus)
         operators = [ParaxialOperator, FeitFleckOperator, LinDudaOperator]
 
         result = run_benchmark(grid, sample, operators)
+        # errors.append(result.errors["ExactOperator"])
         print(result)
         errors_exact.append(result.errors["ExactOperator"])
         errors_paraxial.append(result.errors["ParaxialOperator"])
@@ -108,6 +97,11 @@ else:
         errors_lin_duda = np.load(FILE_4)
     except OSError:
         do_tests()
+
+# print(errors_exact)
+# print(errors_paraxial)
+# print(errors_feit_fleck)
+# print(errors_lin_duda)
 
 fig, axes = plt.subplots()
 plt.plot(moduli, errors_paraxial, "-o", c="red", label="Paraxial Operator")
