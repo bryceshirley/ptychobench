@@ -1,3 +1,4 @@
+from ptychobench.metrics import calculate_farfield_intensity
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
@@ -292,6 +293,42 @@ class BenchmarkResult:
 
             # Y axis is logarithmic
             plt.semilogy(x_values, farfield_error, "-o", c=colour, label=name)
+
+        plt.xlabel("Far Field Position")
+        plt.ylabel("Error")
+        plt.legend()
+
+    def plot_farfield_intensity_error(self):
+        """
+        Plots the intensity error of the farfield of each operator
+        Assumes the exact operator has been used.
+        """
+        assert "Exact" in self.wavefield_history.keys()
+        exact_wavefield_history = self.wavefield_history["Exact"]
+        exact_farfield = exact_wavefield_history[-1, :]
+        exact_farfield_wave = calculate_farfield_intensity(exact_farfield)
+        grid = self.grid
+
+        x_values = [i for i in range(grid.N)]
+        colours = ["green", "yellow", "red"]
+
+        for name, data in self.wavefield_history.items():
+            if name == "Exact":
+                continue
+            farfield_wave = calculate_farfield_intensity(data[-1, :])
+            farfield_error = []
+            for x in x_values:
+                farfield_error.append(abs(exact_farfield_wave[x] - farfield_wave[x]))
+
+            if len(colours) > 0:
+                colour = colours.pop()
+            else:
+                colour = "blue"
+
+            # Y axis is logarithmic
+            # plt.semilogy(x_values, farfield_error, "-o", c=colour, label=name)
+
+            plt.plot(x_values, farfield_error, "-o", c=colour, label=name)
 
         plt.xlabel("Far Field Position")
         plt.ylabel("Error")

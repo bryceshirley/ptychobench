@@ -123,6 +123,15 @@ Assumes the Exact operator has been used.
 result.plot_farfield_error()
 ```
 
+#### Example: Plotting the Intensity Error Across the Farfield
+
+Assumes the Exact operator has been used.
+
+```python
+# Plot the intensity error at the farfield for each of the operators
+result.plot_farfield_intensity_error()
+```
+
 ---
 
 ## 3. Accessing Errors
