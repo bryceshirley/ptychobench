@@ -51,6 +51,7 @@ def calculate_farfield_intensity(exit_wave: np.ndarray):
     # Propagate an exitwave to the far field using a Fourier transform
     # (FFT = Fast Fourier Transform Algorithm)
     farfield_wave = np.fft.fft(exit_wave)
+    farfield_wave = np.fft.fftshift(farfield_wave)
 
     intensity = np.abs(farfield_wave) ** 2
 

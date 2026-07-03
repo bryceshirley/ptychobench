@@ -1,3 +1,4 @@
+from ptychobench.metrics import calculate_farfield_intensity
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
@@ -126,11 +127,14 @@ class BenchmarkResult:
 
         return fig_p, fig_a
 
-    def plot_evolution_1D(self):
+    def plot_evolution_1D(self, plot_line=0.5):  # middle index for x
         """Plots the evolution of the wavefield along the propagation direction at the center of the grid."""
         grid = self.grid
         styles = ["m-", "r--", "g-", "b-.", "c:", "y--", "C0-"]
-        mid_index = grid.N // 2  # Middle index for x
+        mid_index = grid.N * plot_line  # index for x
+        mid_index = int(mid_index)
+        if plot_line > 1.0 or plot_line < 0.0:
+            assert False
 
         # Helper for 1D line plots
         def _plot_1d_comparison(data_extractor, x_axis, xlabel, ylabel, title):
@@ -259,3 +263,71 @@ class BenchmarkResult:
         plt.close(fig2)
 
         logger.info("Plotting complete.")
+
+    def plot_farfield_error(self):
+        """
+        Plots the error of the farfield of each operator
+        Assumes the exact operator has been used.
+        """
+        assert "Exact" in self.wavefield_history.keys()
+        exact_wavefield_history = self.wavefield_history["Exact"]
+        exact_farfield = exact_wavefield_history[-1, :]
+        grid = self.grid
+
+        x_values = [i for i in range(grid.N)]
+        colours = ["green", "yellow", "red"]
+
+        for name, data in self.wavefield_history.items():
+            if name == "Exact":
+                continue
+            farfield_error = []
+            for x in x_values:
+                farfield_error.append(abs(exact_farfield[x] - data[-1, :][x]))
+
+            if len(colours) > 0:
+                colour = colours.pop()
+            else:
+                colour = "blue"
+
+            # Y axis is logarithmic
+            plt.semilogy(x_values, farfield_error, "-o", c=colour, label=name)
+
+        plt.xlabel("Far Field Position")
+        plt.ylabel("Error")
+        plt.legend()
+
+    def plot_farfield_intensity_error(self):
+        """
+        Plots the intensity error of the farfield of each operator
+        Assumes the exact operator has been used.
+        """
+        assert "Exact" in self.wavefield_history.keys()
+        exact_wavefield_history = self.wavefield_history["Exact"]
+        exact_farfield = exact_wavefield_history[-1, :]
+        exact_farfield_wave = calculate_farfield_intensity(exact_farfield)
+        grid = self.grid
+
+        x_values = [i for i in range(grid.N)]
+        colours = ["green", "yellow", "red"]
+
+        for name, data in self.wavefield_history.items():
+            if name == "Exact":
+                continue
+            farfield_wave = calculate_farfield_intensity(data[-1, :])
+            farfield_error = []
+            for x in x_values:
+                farfield_error.append(abs(exact_farfield_wave[x] - farfield_wave[x]))
+
+            if len(colours) > 0:
+                colour = colours.pop()
+            else:
+                colour = "blue"
+
+            # Y axis is logarithmic
+            # plt.semilogy(x_values, farfield_error, "-o", c=colour, label=name)
+
+            plt.plot(x_values, farfield_error, "-o", c=colour, label=name)
+
+        plt.xlabel("Far Field Position")
+        plt.ylabel("Error")
+        plt.legend()
