@@ -101,11 +101,17 @@ result.plot_wavefields()
 result.plot_evolution_1D()
 ```
 
+```python
+# Plots the evolution of the wavefield along the propagation direction at different areas of the grid. automatically sets parameter to 0.5 (center) can be adjusted by user input to values between 0 and 1
+result.plot_evolution_1D(plot_line = 0.8)
+```
+
 #### Example: Plotting the Sample Structure
 
 ```python
 # Plot the 2D structure of the sample (modulus and phase)
 result.plot_sample()
+
 ```
 
 ---
