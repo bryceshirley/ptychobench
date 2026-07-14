@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass, field
 from matplotlib.widgets import Slider
+from typing import Optional, Union
 
 from ptychobench.grid import SimulationGrid
 
@@ -69,12 +70,20 @@ class BenchmarkResult:
                 print(f"  {name:<20}: {err:.6e}")
         print("-" * 45)
 
-    def get_rmse_wavefield(self, operator_name: str) -> float:
+    def get_rmse_wavefield(
+        self, operator_name: Optional[str] = None
+    ) -> Union[float, dict[str, float]]:
         """Returns the wavefield RMSE for a specific operator by its class name."""
+        if operator_name is None:
+            return self.rmse_wavefield
         return self.rmse_wavefield.get(operator_name, float("inf"))
 
-    def get_rmse_detector(self, operator_name: str) -> float:
+    def get_rmse_detector(
+        self, operator_name: Optional[str] = None
+    ) -> Union[float, dict[str, float]]:
         """Returns the detector RMSE for a specific operator by its class name."""
+        if operator_name is None:
+            return self.rmse_detector
         return self.rmse_detector.get(operator_name, float("inf"))
 
     def get_rmse_wavefield_dict(self) -> dict[str, float]:

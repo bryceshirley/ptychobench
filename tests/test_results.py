@@ -15,10 +15,15 @@ class MockSimulationGrid:
 def sample_result():
     """Provides a standard BenchmarkResult object for use in multiple tests."""
     return BenchmarkResult(
-        errors={
+        rmse_wavefield={
             "ExactOperator": 0.0,
             "FeitFleckOperator": 4.5e-5,
             "ParaxialOperator": 1.2e-4,
+        },
+        rmse_detector={
+            "ExactOperator": 0.0,
+            "FeitFleckOperator": 3.2e-5,
+            "ParaxialOperator": 1.0e-4,
         },
         sample_name="TestSample",
         sample_params={"modulus": 0.8, "period": 10.0},
@@ -33,7 +38,7 @@ def sample_result():
 
 def test_get_errors(sample_result):
     """Tests that the full error dictionary is returned correctly."""
-    errors = sample_result.get_errors()
+    errors = sample_result.get_rmse_wavefield()
     assert isinstance(errors, dict)
     assert len(errors) == 3
     assert "ParaxialOperator" in errors
@@ -41,13 +46,13 @@ def test_get_errors(sample_result):
 
 def test_get_error_valid_operator(sample_result):
     """Tests retrieving a specific error for an operator that exists."""
-    err = sample_result.get_error("FeitFleckOperator")
+    err = sample_result.get_rmse_wavefield("FeitFleckOperator")
     assert err == 4.5e-5
 
 
 def test_get_error_invalid_operator(sample_result):
     """Tests that requesting a missing operator returns infinity instead of crashing."""
-    err = sample_result.get_error("NonExistentOperator")
+    err = sample_result.get_rmse_wavefield("NonExistentOperator")
     assert err == float("inf")
 
 
@@ -83,7 +88,8 @@ def test_print_summary_standard(sample_result, capsys):
 def test_print_summary_no_errors(capsys):
     """Tests the fallback print statement when the errors dictionary is empty."""
     empty_result = BenchmarkResult(
-        errors={},
+        rmse_wavefield={},
+        rmse_detector={},
         sample_name="EmptySample",
         sample_params={},
         grid=MockSimulationGrid(),
