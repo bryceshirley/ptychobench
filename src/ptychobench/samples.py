@@ -5,14 +5,25 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
 from matplotlib import pyplot as plt
+from typing import ClassVar
 
 
 # ==========================================
 # Private Helper Functions (Pure Math)
 # ==========================================
 def _apply_boundary_mask(eps: np.ndarray, x_array: np.ndarray, L: float) -> np.ndarray:
-    """Forces free space (epsilon perturbation = 0) in the padded boundary regions."""
-    eps[np.abs(x_array) >= L / 2] = 0.0 + 0j
+    """
+    Free space in the padded boundary regions.
+
+    Returns a complex copy so downstream propagation code has consistent dtype.
+    """
+
+    eps = np.asarray(eps, dtype=np.complex128).copy()
+
+    boundary_mask = np.abs(x_array) >= L / 2
+
+    eps[boundary_mask] = 0.0 + 0.0j
+
     return eps
 
 
@@ -71,38 +82,6 @@ def _build_balls(
     # Convert polar (modulus, phase) to a complex perturbation
     complex_pert = modulus * np.exp(1j * phase * total_profile)
     return complex_pert * total_profile
-
-
-# ==========================================
-# Caching for External Data Samples
-# ==========================================
-_SAMPLE_CACHE = {}
-
-
-def _get_interpolated_sample(file_path, target_nx):
-    """Loads and caches an external sample, zooming the X-axis to match the grid."""
-    cache_key = (str(file_path), target_nx)
-
-    if cache_key not in _SAMPLE_CACHE:
-        data = np.load(file_path)
-        current_nz, current_nx = data.shape
-
-        if current_nx != target_nx:
-            zoom_x = target_nx / current_nx
-            data = zoom(data, (1.0, zoom_x), order=1)
-
-        # Ignore "hot pixels"
-        data_max = np.percentile(data, 99.9)
-
-        if data_max > 0:
-            data = data / data_max
-
-        # Clip any of those extreme outlier pixels down to 1.0 so they don't break the scale
-        data = np.clip(data, 0.0, 1.0)
-
-        _SAMPLE_CACHE[cache_key] = data
-
-    return _SAMPLE_CACHE[cache_key]
 
 
 # ==========================================
@@ -171,36 +150,132 @@ class Sample(ABC):
 
 @dataclass
 class Apoferritin(Sample):
-    """An apoferritin biological sample interpolated from a saved .npy 2D cross-section."""
+    """
+    Apoferritin biological sample interpolated from a saved .npy 2D cross-section.
 
-    modulus: float = 0.08
-    phase: Optional[float] = None
-    file_path: Optional[Path] = Path(__file__).parent / "apoferritin_100Nz565Nx.npy"
+    The stored sample is expected to have shape:
+
+        (Nz, Nx)
+
+    where axis 0 is propagation direction z and axis 1 is transverse x.
+    """
+
+    modulus: Optional[float] = None
+    file_path: Path = Path(__file__).parent / "apoferritin_100Nz400Nx.npy"
+
+    # Class-level cache shared between instances.
+    # Keyed by file path, grid size, and modulus.
+    _sample_cache: ClassVar[
+        dict[tuple[str, int, int, Optional[float]], np.ndarray]
+    ] = {}
 
     def __post_init__(self):
-        if self.phase is None:
-            self.phase = self.modulus * 1e-2
+        if self.file_path is None:
+            raise ValueError("file_path cannot be None.")
+
+        self.file_path = Path(self.file_path)
+
+        if not self.file_path.exists():
+            raise FileNotFoundError(f"Sample file not found: {self.file_path}")
+
+    def _cache_key(self, grid) -> tuple[str, int, int, Optional[float]]:
+        """
+        Builds the cache key for this sample/grid/modulus combination.
+        """
+        return (
+            str(self.file_path.resolve()),
+            int(grid.Nz),
+            int(grid.N),
+            self.modulus,
+        )
+
+    def _load_raw_sample(self) -> np.ndarray:
+        """
+        Loads the raw apoferritin sample from disk.
+        """
+        data = np.load(str(self.file_path))
+
+        if data.ndim != 2:
+            raise ValueError(
+                f"Expected apoferritin sample to be 2D, got shape {data.shape}."
+            )
+
+        return np.asarray(data, dtype=float)
+
+    def _resample_to_grid(self, data: np.ndarray, grid) -> np.ndarray:
+        """
+        Resamples the sample array to match the simulation grid shape:
+
+            target shape = (grid.Nz, grid.N)
+        """
+
+        target_shape = (grid.Nz, grid.N)
+
+        if data.shape == target_shape:
+            return data
+
+        zoom_z = grid.Nz / data.shape[0]
+        zoom_x = grid.N / data.shape[1]
+
+        return zoom(data, (zoom_z, zoom_x), order=1)
+
+    def _apply_modulus(self, data: np.ndarray) -> np.ndarray:
+        """
+        Optionally rescales the sample to [0, modulus].
+
+        If modulus is None, the raw/interpolated data is left unchanged.
+        """
+
+        if self.modulus is None:
+            data = np.asarray(data, dtype=float)
+
+            # Remove invalid signed density values.
+            # Negative real values would produce phase pi under np.angle.
+            data = np.clip(data, 0.0, None)
+            return data.astype(np.complex128)
+
+        data_min = np.min(data)
+        data_max = np.max(data)
+        data_range = data_max - data_min
+
+        if np.isclose(data_range, 0.0):
+            return np.zeros_like(data)
+
+        data = (data - data_min) / data_range
+        data = data * self.modulus
+
+        return data
+
+    def cache_sample(self, grid) -> np.ndarray:
+        """
+        Loads, resamples, rescales, and caches the sample for this grid.
+        """
+
+        key = self._cache_key(grid)
+
+        if key not in self._sample_cache:
+            data = self._load_raw_sample()
+            data = self._resample_to_grid(data, grid)
+            data = self._apply_modulus(data)
+
+            self._sample_cache[key] = data
+
+        return self._sample_cache[key]
 
     def get_permittivity(self, grid, z: float) -> np.ndarray:
-        target_nx = len(grid.x)
-        full_2d_sample = _get_interpolated_sample(self.file_path, target_nx)
-        current_nz = full_2d_sample.shape[0]
+        """
+        Returns the transverse permittivity/profile slice at propagation position z.
+        """
 
+        sample = self.cache_sample(grid)
+
+        # Determine the corresponding index in the sample array based on z
         z_fraction = np.clip(z / grid.z_prop, 0.0, 1.0)
-        z_idx = int(z_fraction * (current_nz - 1))
+        z_idx = int(round(z_fraction * (sample.shape[0] - 1)))
+        # Ensure index is within bounds
+        z_idx = np.clip(z_idx, 0, sample.shape[0] - 1)
 
-        # The profile is now safely normalized between 0 and 1
-        profile = full_2d_sample[z_idx, :]
-
-        # Multiply the normalized profile by the user's chosen modulus
-        # to scale the overall strength of the physical object.
-        scaled_profile = profile * self.modulus
-
-        # 1. Create a spatial phase map based on the normalized structure
-        phase_map = profile * self.phase
-
-        # 2. Combine the scaled amplitude with the complex phase shift
-        eps = scaled_profile * np.exp(1j * phase_map)
+        eps = sample[z_idx, :]
 
         return _apply_boundary_mask(eps, grid.x, grid.L)
 
@@ -210,13 +285,9 @@ class StraightWaveguides(Sample):
     """A periodic array of perfectly straight waveguides."""
 
     modulus: float = 0.08
-    phase: Optional[float] = None
+    phase: Optional[float] = 0.0
     period: float = 10.0
     core_width: float = 1.5
-
-    def __post_init__(self):
-        if self.phase is None:
-            self.phase = self.modulus * 1e-2
 
     def get_permittivity(self, grid, z: float) -> np.ndarray:
         eps = _build_waveguides(
@@ -235,14 +306,10 @@ class ZigWaveguides(Sample):
     """A periodic array of waveguides that curve (wiggle) along the z-axis."""
 
     modulus: float = 0.08
-    phase: Optional[float] = None
+    phase: Optional[float] = 0.0
     period: float = 10.0
     core_width: float = 1.5
     wiggle_amp: float = 2.0
-
-    def __post_init__(self):
-        if self.phase is None:
-            self.phase = self.modulus * 1e-2
 
     def get_permittivity(self, grid, z: float) -> np.ndarray:
         wiggle_offset = self.wiggle_amp * np.sin(2 * np.pi * z / (grid.z_prop / 2))
@@ -262,14 +329,10 @@ class StraightBalls(Sample):
     """A discrete sequence of highly localized spherical features arranged in straight vertical lines."""
 
     modulus: float = 0.08
-    phase: Optional[float] = None
+    phase: Optional[float] = 0.0
     num_balls: int = 15
     ball_radius: float = 0.8
     x_period: float = 5.0
-
-    def __post_init__(self):
-        if self.phase is None:
-            self.phase = self.modulus * 1e-2
 
     def get_permittivity(self, grid, z: float) -> np.ndarray:
         eps = _build_balls(
@@ -292,15 +355,11 @@ class ZigBalls(Sample):
     """A discrete sequence of highly localized spherical features arranged in a sharp zig-zag pattern."""
 
     modulus: float = 0.08
-    phase: Optional[float] = None
+    phase: Optional[float] = 0.0
     num_balls: int = 25
     ball_radius: float = 0.8
     x_period: float = 5.0
     x_amplitude: float = 3.0
-
-    def __post_init__(self):
-        if self.phase is None:
-            self.phase = self.modulus * 1e-2
 
     def get_permittivity(self, grid, z: float) -> np.ndarray:
         eps = _build_balls(
