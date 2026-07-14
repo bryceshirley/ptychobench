@@ -5,7 +5,7 @@ from typing import Type, Sequence, Union
 
 from ptychobench.grid import SimulationGrid
 from ptychobench.operators import ForwardOperator, ExactOperator
-from ptychobench.metrics import calculate_rmse
+from ptychobench.metrics import calculate_rmse, calculate_rmse_intensity
 from ptychobench.samples import Sample
 from ptychobench.results import BenchmarkResult
 
@@ -63,14 +63,14 @@ def run_benchmark(
             wavefield_history[display_name][i, :] = current_psi[class_name]
 
             # Propagate using the internal class name
-            P = operator.step(E)
-            current_psi[class_name] = P @ current_psi[class_name]
+            current_psi[class_name] = operator.step(E, current_psi[class_name])
 
         if (i + 1) % max(1, (grid.Nz // 10)) == 0:
             logger.debug(f"Step {i + 1}/{grid.Nz} completed.")
 
     # --- 3. Compute Relative Errors against "ExactOperator" ---
-    errors = {}
+    rmse_wavefield = {}
+    rmse_detector = {}
 
     # Ensure ExactOperator was part of the run
     if "ExactOperator" in instantiated_ops:
@@ -80,11 +80,15 @@ def run_benchmark(
 
         for class_name, op in instantiated_ops.items():
             if class_name == "ExactOperator":
-                errors[class_name] = 0.0
+                rmse_wavefield[class_name] = 0.0
+                rmse_detector[class_name] = 0.0
             else:
                 # Calculate RMSE and store it under the simple class name
-                errors[class_name] = calculate_rmse(
+                rmse_wavefield[class_name] = calculate_rmse(
                     exact_data.ravel(), wavefield_history[op.name].ravel()
+                )
+                rmse_detector[class_name] = calculate_rmse_intensity(
+                    exact_data[-1, :], wavefield_history[op.name][-1, :]
                 )
     else:
         logger.warning(
@@ -99,7 +103,8 @@ def run_benchmark(
     return BenchmarkResult(
         grid=grid,
         wavefield_history=wavefield_history,
-        errors=errors,
+        rmse_wavefield=rmse_wavefield,
+        rmse_detector=rmse_detector,
         sample_history=sample_history,
         sample_name=s_name,
         sample_params=s_params,
