@@ -18,13 +18,7 @@ def calculate_rmse(exact: np.ndarray, approx: np.ndarray) -> float:
     """
     # Get the number of elements in the arrays
     N = len(exact)
-    # N = exact.__len__()
 
-    # TODO: Students to implement this using Ping-Pong TDD!
-    # Hints:
-    #  - Use a standard 'for' loop to represent the summation formula.
-    #  - Use the built-in abs() function to compute the absolute value ie |exact_i - approx_i|
-    # return 1.0  # Placeholder return value
     total = 0
     for idx in range(N):
         x = exact[idx]
@@ -39,20 +33,28 @@ def calculate_rmse_intensity(exact: np.ndarray, approx: np.ndarray) -> float:
     """
     Calculates the Root Mean Square Error (RMSE) between the intensity of the exit wave of the exact and approximate.
     """
-    exact_intensity = calculate_farfield_intensity(exact)
-    approx_intensity = calculate_farfield_intensity(approx)
+    exact_intensity = calculate_farfield_wave(exact, mode="intensity")
+    approx_intensity = calculate_farfield_wave(approx, mode="intensity")
     return calculate_rmse(exact_intensity, approx_intensity)
 
 
-def calculate_farfield_intensity(exit_wave: np.ndarray):
+def calculate_farfield_wave(
+    exit_wave: np.ndarray, mode: str = "intensity"
+) -> np.ndarray:
     """
     Calculates the intensity of the exitwave by propagating the exitwave to the far field using a Fourier transform
     """
     # Propagate an exitwave to the far field using a Fourier transform
     # (FFT = Fast Fourier Transform Algorithm)
-    farfield_wave = np.fft.fft(exit_wave)
-    farfield_wave = np.fft.fftshift(farfield_wave)
+    farfield_wave = np.fft.fftshift(np.fft.fft(exit_wave))
 
-    intensity = np.abs(farfield_wave) ** 2
-
-    return intensity
+    if mode == "intensity":
+        return np.abs(farfield_wave) ** 2
+    elif mode == "magnitude":
+        return np.abs(farfield_wave)
+    elif mode == "phase":
+        return np.angle(farfield_wave)
+    else:
+        raise ValueError(
+            f"Invalid mode: {mode}. Choose from 'intensity', 'magnitude', or 'phase'."
+        )
