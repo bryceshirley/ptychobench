@@ -26,36 +26,36 @@ $$\frac{\partial \psi}{\partial z} = i k_0 (\mathcal{Q}-1) \psi$$
 
 ## 2. The Exponential Propagation Operator
 
-The forward propagation equation can be expressed in terms of the transverse operator $\mathcal{T}$ as:
+The forward propagation equation can be expressed in terms of the transverse operator $\mathcal{H}$ as:
 
-$$\frac{\partial \psi}{\partial z} = i k_0 \mathcal{T} \psi$$
+$$\frac{\partial \psi}{\partial z} = i k_0 \mathcal{H} \psi$$
 
-where $\mathcal{T} = \mathcal{Q} - 1$ is the transverse operator.
+where $\mathcal{H} = \mathcal{Q} - 1$ is the transverse operator.
 
 The exact exponential solution to propagate the forward wave over a step size $dz$ is given by:
 
-$$\psi(z + dz) = \exp(i k_0 \mathcal{T} dz) \psi(z)$$
+$$\psi(z + dz) = \exp(i k_0 \mathcal{H} dz) \psi(z)$$
 
 
 ## 3. Propagation Approximations
 
-In 3D, computing the $\mathcal{T}$ is computationally unfeasible. However, by restricting our simulation to 2D, we can directly evaluate the operator and rigorously benchmark it against standard approximations that are required in practice.
+In 3D, computing the $\mathcal{H}$ is computationally unfeasible. However, by restricting our simulation to 2D, we can directly evaluate the operator and rigorously benchmark it against standard approximations that are required in practice.
 
-The exact operator $\mathcal{T}$ can be expanded via a Taylor series as:
+The exact operator $\mathcal{H}$ can be expanded via a Taylor series as:
 
-$$\mathcal{T}  = \frac{1}{2}(\epsilon + \mu) - \frac{1}{8}(\epsilon^2 + \epsilon\mu + \mu\epsilon + \mu^2) + \dots$$
+$$\mathcal{H}  = \frac{1}{2}(\epsilon + \mu) - \frac{1}{8}(\epsilon^2 + \epsilon\mu + \mu\epsilon + \mu^2) + \dots$$
 
 The following implemented approximations represent different truncations and corrections of this series:
 
-* **$\mathcal{T}_1$ (Paraxial Approximation):** Assumes small scattering angles. 
-    $$\mathcal{T}_1 = \frac{1}{2}(\epsilon + \mu)$$
-* **$\mathcal{T}_2$ (Feit/Fleck Split-Step):** Separates the kinetic and environmental components. It is exact when either the potential or kinetic operator is zero.
-    $$\mathcal{T}_2 = \mathcal{L} + \mathcal{N}$$
+* **$\mathcal{H}_1$ (Paraxial Approximation):** Assumes small scattering angles. 
+    $$\mathcal{H}_1 = \frac{1}{2}(\epsilon + \mu)$$
+* **$\mathcal{H}_2$ (Feit/Fleck Split-Step):** Separates the kinetic and environmental components. It is exact when either the potential or kinetic operator is zero.
+    $$\mathcal{H}_2 = \mathcal{L} + \mathcal{N}$$
     *(Note: $\mathcal{N} = \sqrt{1 + \epsilon} - 1$ is the potential operator, $\mathcal{L} = \sqrt{1 + \mu} - 1$ is the exact free-space kinetic operator).*
-* **$\mathcal{T}_3$ (Yevick/Thomson):** Improves upon Feit/Fleck by explicitly subtracting the second-order cross terms.
-    $$\mathcal{T}_3  = \mathcal{T}_2 - \frac{1}{8}(\epsilon\mu + \mu\epsilon)$$
-* **$\mathcal{T}_4$ (Lin/Duda):** An alternative improvement upon Feit/Fleck that subtracts the second-order commutation error using the separated operators, offering better numerical stability.
-    $$\mathcal{T}_4 = \mathcal{T}_2  - \frac{1}{2}(\mathcal{LN} + \mathcal{NL})$$
+* **$\mathcal{H}_3$ (Yevick/Thomson):** Improves upon Feit/Fleck by explicitly subtracting the second-order cross terms.
+    $$\mathcal{H}_3  = \mathcal{H}_2 - \frac{1}{8}(\epsilon\mu + \mu\epsilon)$$
+* **$\mathcal{H}_4$ (Lin/Duda):** An alternative improvement upon Feit/Fleck that subtracts the second-order commutation error using the separated operators, offering better numerical stability.
+    $$\mathcal{H}_4 = \mathcal{H}_2  - \frac{1}{2}(\mathcal{LN} + \mathcal{NL})$$
 
 * Future work will utilize operator learning to improve upon the Feit/Fleck approximation, which is currently the most widely used in practice.
 
@@ -65,11 +65,11 @@ The table below illustrates how the higher-order approximations successfully rec
 
 | Operator | Method | Taylor Expansion | Order of Accuracy |
 | :--- | :--- | :--- | :--- |
-| $\mathcal{T}_{Exact}$ | Ground Truth | $\frac{1}{2}(\epsilon + \mu) - \frac{1}{8}(\epsilon^2 + \epsilon\mu + \mu\epsilon + \mu^2) + \dots$ | Infinite |
-| $\mathcal{T}_1$ | Paraxial | $\frac{1}{2}(\epsilon + \mu)$ | First Order |
-| $\mathcal{T}_2$ | Feit/Fleck | $\frac{1}{2}(\epsilon + \mu) - \frac{1}{8}(\epsilon^2 + \mu^2) + \dots$ | First Order |
-| $\mathcal{T}_3$ | Yevick/Thomson | $\frac{1}{2}(\epsilon + \mu) - \frac{1}{8}(\epsilon^2 + \epsilon\mu + \mu\epsilon + \mu^2) + \dots$ | Second Order  |
-| $\mathcal{T}_4$ | Lin/Duda | $\frac{1}{2}(\epsilon + \mu) - \frac{1}{8}(\epsilon^2 + \epsilon\mu + \mu\epsilon + \mu^2) + \dots$ | Second Order |
+| $\mathcal{H}_{Exact}$ | Ground Truth | $\frac{1}{2}(\epsilon + \mu) - \frac{1}{8}(\epsilon^2 + \epsilon\mu + \mu\epsilon + \mu^2) + \dots$ | Infinite |
+| $\mathcal{H}_1$ | Paraxial | $\frac{1}{2}(\epsilon + \mu)$ | First Order |
+| $\mathcal{H}_2$ | Feit/Fleck | $\frac{1}{2}(\epsilon + \mu) - \frac{1}{8}(\epsilon^2 + \mu^2) + \dots$ | First Order |
+| $\mathcal{H}_3$ | Yevick/Thomson | $\frac{1}{2}(\epsilon + \mu) - \frac{1}{8}(\epsilon^2 + \epsilon\mu + \mu\epsilon + \mu^2) + \dots$ | Second Order  |
+| $\mathcal{H}_4$ | Lin/Duda | $\frac{1}{2}(\epsilon + \mu) - \frac{1}{8}(\epsilon^2 + \epsilon\mu + \mu\epsilon + \mu^2) + \dots$ | Second Order |
 
 > *Note: This framework allows us to rigorously test the accuracy of these approximations across different sample geometries, refractive index perturbations, and beam divergence angles.*
 
