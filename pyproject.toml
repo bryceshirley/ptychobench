@@ -12,6 +12,8 @@ dependencies = [
     "mkdocs-material>=9.7.6",
     "scikit-image>=0.25.2",
     "ipympl>=0.10.0",
+    "h5py>=3.16.0",
+    "torch>=2.12.1",
 ]
 requires-python = ">=3.10"
 

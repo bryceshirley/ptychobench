@@ -35,7 +35,7 @@ by raising clear errors.
 
 from ptychobench.metrics import (
     calculate_rmse,
-    calculate_farfield_intensity,
+    calculate_farfield_wave,
     calculate_rmse_intensity,
 )
 import numpy as np
@@ -80,7 +80,7 @@ def test_calculate_rmse_intensity_identical_arrays():
 
 def test_zero_intensity():
     list = np.array([0.0, 0.0, 0.0])
-    assert 0.0 == sum(calculate_farfield_intensity(list))
+    assert 0.0 == sum(calculate_farfield_wave(list))
 
 
 def test_calculate_rmse_intensity_error():
@@ -91,4 +91,4 @@ def test_calculate_rmse_intensity_error():
 
 def test_non_zero_intensity():
     list_x = np.array([8.0, 16.0, 22.0])
-    assert sum(calculate_farfield_intensity(list_x)) > 0.0
+    assert sum(calculate_farfield_wave(list_x)) > 0.0

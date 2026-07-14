@@ -10,18 +10,13 @@ class SimulationGrid:
     """
 
     # ---------------------------------------------------------
-    # Core Parameters (No defaults must come first)
-    # ---------------------------------------------------------
-    # The propagation angle (in degrees) at the edge of the probe width.
-    divergence_angle: float
-
-    # ---------------------------------------------------------
     # Default Parameters
     # ---------------------------------------------------------
-    lam: float = 1.0  # Wavelength of the light (arbitrary units)
+    divergence_angle: float = 0.0
+    lam: float = 0.1  # Wavelength of the light (arbitrary units)
     L: float = 100.0  # Total transverse width of the simulation domain
-    z_prop: float = 50.0  # Total propagation distance
-    N: int = 128  # Number of transverse pixels
+    z_prop: float = 100.0  # Total propagation distance
+    N: int = 200  # Number of transverse pixels
     Nz: int = 100  # Number of longitudinal steps (z-steps)
     probe_width: float = 5.0  # Width of the initial Gaussian beam
 
@@ -83,30 +78,69 @@ class SimulationGrid:
         # Convert degrees to radians for internal math
         div_angle_rads = np.radians(self.divergence_angle)
 
-        # Calculate phase multiplier to steer the beam
-        phase_multiplier = div_angle_rads / (2 * self.probe_width)
-        phase = np.exp(1j * self.k0 * (self.x**2) * phase_multiplier)
+        # Calculate a quadaratic phase shift
+        phase_shift = np.exp(1j * div_angle_rads * (self.x**2) / (2 * self.probe_width))
 
-        return amplitude * phase
+        return amplitude * phase_shift
+
+    @property
+    def propagating_mask(self) -> np.ndarray:
+        """
+        True for propagating Fourier modes satisfying |kx| <= k0.
+        False for evanescent modes.
+        """
+        return np.abs(self.kx) <= self.k0
+
+    def project_propagating(self, psi: np.ndarray) -> np.ndarray:
+        """
+        Remove evanescent Fourier components from a field.
+        """
+        psi_k = self.F @ psi
+        psi_k = self.propagating_mask * psi_k
+        return self.F_inv @ psi_k
 
     def get_kinetic_operator(self) -> np.ndarray:
         """
-        Calculates the constant kinetic operator matrix (M).
-        M = F_inv @ D_kx @ F
-        """
-        # Diagonal matrix of spectral frequencies
-        D_kx = np.diag(-(self.kx**2) / (self.k0**2) + 0j)
+        Calculates the band-limited kinetic operator matrix mu.
 
-        # Reuse the pre-calculated DFT matrices
-        return self.F_inv @ D_kx @ self.F
+        Original:
+            mu = F_inv @ diag(-kx^2/k0^2) @ F
+
+        With evanescent removal:
+            1 + mu = max(1 - kx^2/k0^2, 0)
+
+        Therefore:
+            mu = max(1 - kx^2/k0^2, 0) - 1
+        """
+
+        kz_sq_over_k0_sq = 1.0 - (self.kx**2) / (self.k0**2)
+
+        kz_sq_over_k0_sq = np.where(self.propagating_mask, kz_sq_over_k0_sq, 0.0)
+
+        mu_diag = kz_sq_over_k0_sq - 1.0
+
+        D_mu = np.diag(mu_diag.astype(complex))
+
+        return self.F_inv @ D_mu @ self.F
 
     def get_angular_spectrum_operator(self) -> np.ndarray:
         """
-        Calculates the angular spectrum operator (L_op).
-        L_op = sqrt(I - (kx^2 / k0^2)) - I
-        """
-        # Angular spectrum diagonal matrix
-        D_L = np.diag(np.sqrt(1 - (self.kx**2) / (self.k0**2) + 0j) - 1.0)
+        Calculates the band-limited angular spectrum envelope operator L.
 
-        # Reuse the pre-calculated DFT matrices
+        L = sqrt(1 + mu) - 1
+
+        In Fourier space:
+            L(kx) = sqrt(1 - kx^2/k0^2) - 1
+
+        Evanescent modes are clipped by setting kz = 0.
+        """
+
+        kz_sq_over_k0_sq = 1.0 - (self.kx**2) / (self.k0**2)
+
+        kz_sq_over_k0_sq = np.where(self.propagating_mask, kz_sq_over_k0_sq, 0.0)
+
+        L_diag = np.sqrt(kz_sq_over_k0_sq) - 1.0
+
+        D_L = np.diag(L_diag.astype(complex))
+
         return self.F_inv @ D_L @ self.F

@@ -57,9 +57,9 @@ def test_operator_initialization(grid):
     """Test that all operators initialize correctly with expected names."""
     ops = [
         (ExactOperator(grid), "Exact"),
-        (ParaxialOperator(grid), "Paraxial (Q1)"),
-        (FeitFleckOperator(grid), "Feit/Fleck (Q2)"),
-        (LinDudaOperator(grid), "Lin/Duda (Q3)"),
+        (ParaxialOperator(grid), "Paraxial"),
+        (FeitFleckOperator(grid), "Feit/Fleck"),
+        (LinDudaOperator(grid), "Lin/Duda"),
     ]
 
     for op, expected_name in ops:
@@ -76,9 +76,10 @@ def test_operator_step_output_shape(grid, dummy_E):
         FeitFleckOperator(grid),
         LinDudaOperator(grid),
     ]
+    psi = np.eye(grid.N, dtype=complex)  # Identity wavefield for testing
 
     for op in operators:
-        P = op.step(dummy_E)
+        P = op.step(dummy_E, psi)
         assert P.shape == (grid.N, grid.N), f"{op.name} returned incorrect shape"
         assert P.dtype == complex, f"{op.name} should return a complex array"
 
@@ -103,11 +104,11 @@ def test_trivial_propagation(grid):
     ]
 
     I_expected = np.eye(grid.N, dtype=complex)
-
+    psi = np.eye(grid.N, dtype=complex)  # Identity wavefield for testing
     for op in operators:
         # Re-initialize the operator so it picks up the zeroed lambda functions
         op.__init__(grid)
-        P = op.step(E_zero)
+        P = op.step(E_zero, psi)
 
         # assert_allclose is great for floating point comparisons!
         np.testing.assert_allclose(

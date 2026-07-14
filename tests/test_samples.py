@@ -10,6 +10,7 @@ class MockGrid:
         self.L = 100.0  # Boundary is at +/- 50.0
         self.N = 128
         self.z_prop = 50.0
+        self.Nz = 10
         # Include points beyond +/- 50.0 to trigger the mask
         self.x = np.linspace(-60.0, 60.0, 128)
 
