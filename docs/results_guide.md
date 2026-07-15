@@ -97,13 +97,21 @@ result.plot_wavefields()
 #### Example: Plotting the 1D Wavefield Evolution
 
 ```python
-# Plot the 1D phase and amplitude evolution of the wavefield along the center of the grid
+# Plot the 1D phase and modulus evolution of the wavefield along the center of the grid (x=0.0)
 result.plot_evolution_1D()
 ```
 
 ```python
-# Plots the evolution of the wavefield along the propagation direction at different areas of the grid. automatically sets parameter to 0.5 (center) can be adjusted by user input to values between 0 and 1
-result.plot_evolution_1D(plot_line = 0.8)
+# Plots evolution of phase and modulus along `x=value`, where the value must be with in the simulation bounds of `[-L/2, L/2]`
+result.plot_evolution_1D(x = 2.0)
+```
+
+### Example: Slider evolution plot - for use in jupyter notebooks
+
+```python
+# Creates an interactive plot where values of x can be varied using a slider
+%matplotlib widget
+result.plot_evolution_slider()
 ```
 
 #### Example: Plotting the Sample Structure
@@ -111,7 +119,6 @@ result.plot_evolution_1D(plot_line = 0.8)
 ```python
 # Plot the 2D structure of the sample (modulus and phase)
 result.plot_sample()
-
 ```
 
 #### Example: Plotting the Error Across the Farfield
