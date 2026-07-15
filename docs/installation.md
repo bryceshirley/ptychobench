@@ -3,8 +3,8 @@
 **1. Clone the repository:**
 
 ```bash
-git clone https://github.com/bryceshirley/ptychobench-workexperience.git
-cd ptychobench-workexperience
+git clone https://github.com/bryceshirley/ptychobench.git
+cd ptychobench
 ```
 
 **2. Install `uv` (Package Manager)** via instructions [here](https://docs.astral.sh/uv/getting-started/installation/).
