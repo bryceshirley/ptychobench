@@ -26,7 +26,7 @@ def grid():
 def test_waveguide_geometry(grid):
     """Test that StraightWaveguides produces peaks at the correct period."""
     # Set modulus to 0.8 so the peak is clearly > 0.5
-    sample = StraightWaveguides(period=10.0, modulus=0.8)
+    sample = StraightWaveguides(modulus=0.8)
     eps = sample.get_permittivity(grid, z=0.0)
 
     # Grid center is index 64 (x approx 0)

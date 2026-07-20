@@ -116,3 +116,14 @@ from ptychobench.samples import ZigBalls
 
 sample = ZigBalls(modulus=0.8)
 ```
+
+## 6. SharpStraightWaveguides
+
+A periodic array of straight waveguides with sharp edges.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| **`modulus`** | `float` | `0.08` | The strength of the waveguides. |
+| `num_cores` | `int` | `3` | Number of waveguide cores. |
+| `core_width` | `float` | | `0.05` | The width of the waveguide core. |
+| `blur` | `float` | `0.0` | The amount of Gaussian blur applied to the edges of the waveguides. |

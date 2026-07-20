@@ -5,7 +5,11 @@ from typing import Type, Sequence, Union
 
 from ptychobench.grid import SimulationGrid
 from ptychobench.operators import ForwardOperator, ExactOperator
-from ptychobench.metrics import calculate_rmse, calculate_rmse_intensity
+from ptychobench.metrics import (
+    calculate_rmse,
+    calculate_rmse_intensity,
+    calculate_max_intensity_error,
+)
 from ptychobench.samples import Sample
 from ptychobench.results import BenchmarkResult
 
@@ -49,11 +53,11 @@ def run_benchmark(
     sample_history = np.zeros((grid.Nz, grid.N), dtype=complex)
 
     logger.debug(f"Starting 2D propagation over {grid.Nz} steps...")
-
     # --- 2. The Range-Dependent Z-Loop ---
     for i, z in enumerate(grid.z_steps):
         eps = sample.get_permittivity(grid, z)
         E = np.diag(eps)
+
         sample_history[i, :] = eps
 
         for class_name, operator in instantiated_ops.items():
@@ -71,6 +75,7 @@ def run_benchmark(
     # --- 3. Compute Relative Errors against "ExactOperator" ---
     rmse_wavefield = {}
     rmse_detector = {}
+    max_error_detector = {}
 
     # Ensure ExactOperator was part of the run
     if "ExactOperator" in instantiated_ops:
@@ -90,6 +95,10 @@ def run_benchmark(
                 rmse_detector[class_name] = calculate_rmse_intensity(
                     exact_data[-1, :], wavefield_history[op.name][-1, :]
                 )
+
+                max_error_detector[class_name] = calculate_max_intensity_error(
+                    exact_data[-1, :], wavefield_history[op.name][-1, :]
+                )
     else:
         logger.warning(
             "'ExactOperator' not found in operators. Skipping error calculation."
@@ -105,6 +114,7 @@ def run_benchmark(
         wavefield_history=wavefield_history,
         rmse_wavefield=rmse_wavefield,
         rmse_detector=rmse_detector,
+        max_error_detector=max_error_detector,
         sample_history=sample_history,
         sample_name=s_name,
         sample_params=s_params,

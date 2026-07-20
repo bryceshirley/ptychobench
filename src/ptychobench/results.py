@@ -29,6 +29,7 @@ class BenchmarkResult:
     # Keyed by the Operator CLASS NAME (e.g., "ParaxialOperator")
     rmse_wavefield: dict[str, float]
     rmse_detector: dict[str, float]
+    max_error_detector: dict[str, float]
 
     # --- 2. Simulation Metadata ---
     sample_name: str
@@ -66,6 +67,20 @@ class BenchmarkResult:
             self.rmse_detector.items(), key=lambda item: item[1]
         )
         for name, err in sorted_detector_errors:
+            if name != "ExactOperator":
+                print(f"  {name:<20}: {err:.6e}")
+        print("-" * 45)
+
+        print(
+            "\nDetector Intensity Errors (Max Absolute Error relative to ExactOperator):"
+        )
+        if not self.max_error_detector:
+            print("  No errors calculated (ExactOperator missing from run).")
+
+        sorted_max_detector_errors = sorted(
+            self.max_error_detector.items(), key=lambda item: item[1]
+        )
+        for name, err in sorted_max_detector_errors:
             if name != "ExactOperator":
                 print(f"  {name:<20}: {err:.6e}")
         print("-" * 45)

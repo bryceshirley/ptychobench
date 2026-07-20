@@ -27,10 +27,42 @@ def _apply_boundary_mask(eps: np.ndarray, x_array: np.ndarray, L: float) -> np.n
     return eps
 
 
-def _build_waveguides(x_array, modulus, phase, offset, period, core_width):
-    """Core logic for generating periodic waveguides using modulus and phase."""
-    x_mod = (x_array - offset + period / 2) % period - period / 2
+def _build_waveguides(grid, modulus, phase, offset, num_cores, core_width):
+    """
+    Core logic for generating periodic waveguides using modulus and phase.
+    """
+    # Width of the simulation domain
+    L = grid.L
+
+    # Determine the period of the waveguides based on the number of cores and domain width
+    period = L / num_cores
+
+    x_mod = (grid.x - offset + period / 2) % period - period / 2
     profile = np.exp(-(x_mod**2) / (core_width**2))
+
+    # Convert polar (modulus, phase) to a complex perturbation
+    complex_pert = modulus * np.exp(1j * phase * profile)
+    return complex_pert * profile
+
+
+def _build_sharp_grad_waveguides(grid, modulus, phase, num_cores, core_width, blur=0.0):
+    """
+    Builds a periodic array of waveguides with sharp edges, optionally blurred by a Gaussian kernel.
+    """
+    # Width of the simulation domain
+    L = grid.L
+
+    # Determine the period of the waveguides based on the number of cores and domain width
+    period = L / num_cores
+
+    x_mod = (grid.x + period / 2) % period - period / 2
+    profile = np.where(np.abs(x_mod) <= core_width / 2, 1.0, 0.0)
+
+    if blur > 0.0:
+        # Apply Gaussian blur to smooth the edges
+        from scipy.ndimage import gaussian_filter1d
+
+        profile = gaussian_filter1d(profile, sigma=blur)
 
     # Convert polar (modulus, phase) to a complex perturbation
     complex_pert = modulus * np.exp(1j * phase * profile)
@@ -96,6 +128,49 @@ class Sample(ABC):
     def get_permittivity(self, grid, z: float) -> np.ndarray:
         """Returns the 1D complex permittivity array for a specific z-slice."""
         pass
+
+    def plot_cross_section_modulus(self, grid, z: float = 0.0, fourier: bool = False):
+        """
+        Plots the modulus and phase of the permittivity at a specific z-slice.
+
+        Parameters:
+            grid: The simulation grid object.
+            z (float): The propagation distance at which to evaluate the permittivity.
+            fourier (bool): If True, plots the Fourier transform of the permittivity.
+        """
+        eps = self.get_permittivity(grid, z)
+        if fourier:
+            eps = np.fft.fft(eps)
+            eps = np.fft.fftshift(eps)
+            title = f"Modulus of Permittivity at z={z:.2f} (Fourier Domain)"
+        else:
+            title = f"Modulus of Permittivity at z={z:.2f} (Spatial Domain)"
+        plt.plot(grid.x, np.abs(eps))
+        plt.xlabel("Transverse coordinate x")
+        plt.ylabel("|ε(x, z)|")
+        plt.title(title)
+        plt.show()
+        plt.close()
+
+    def plot_cross_section_phase(self, grid, z: float = 0.0):
+        """Plots the phase of the permittivity at a specific z-slice."""
+        eps = self.get_permittivity(grid, z)
+        plt.plot(grid.x, np.angle(eps))
+        plt.xlabel("Transverse coordinate x")
+        plt.ylabel("∠ε(x, z)")
+        plt.title(f"Phase of Permittivity at z={z:.2f}")
+        plt.show()
+
+    def max_gradient(self, grid) -> float:
+        """
+        Computes the maximum gradient of the permittivity across all z-slices.
+        """
+        max_grad = 0.0
+        for z in grid.z_steps:
+            eps = self.get_permittivity(grid, z)
+            grad = np.max(np.abs(np.gradient(eps, grid.dx)))
+            max_grad = max(max_grad, grad)
+        return max_grad
 
     def plot(self, grid):
         """Compute and plot modulus and phase of the sample."""
@@ -284,19 +359,41 @@ class Apoferritin(Sample):
 class StraightWaveguides(Sample):
     """A periodic array of perfectly straight waveguides."""
 
-    modulus: float = 0.08
+    modulus: float = 0.01
     phase: Optional[float] = 0.0
-    period: float = 10.0
+    num_cores: float = 5.0
     core_width: float = 1.5
 
     def get_permittivity(self, grid, z: float) -> np.ndarray:
         eps = _build_waveguides(
-            grid.x,
+            grid,
             self.modulus,
             self.phase,
             offset=0.0,
-            period=self.period,
+            num_cores=self.num_cores,
             core_width=self.core_width,
+        )
+        return _apply_boundary_mask(eps, grid.x, grid.L)
+
+
+@dataclass
+class SharpStraightWaveguides(Sample):
+    """A periodic array of perfectly straight waveguides."""
+
+    modulus: float = 0.01
+    phase: Optional[float] = 0.0
+    num_cores: float = 5.0
+    core_width: float = 1.5
+    blur: float = 0.0  # Optional Gaussian blur for sharp edges
+
+    def get_permittivity(self, grid, z: float) -> np.ndarray:
+        eps = _build_sharp_grad_waveguides(
+            grid,
+            self.modulus,
+            self.phase,
+            num_cores=self.num_cores,
+            core_width=self.core_width,
+            blur=self.blur,
         )
         return _apply_boundary_mask(eps, grid.x, grid.L)
 
@@ -307,7 +404,7 @@ class ZigWaveguides(Sample):
 
     modulus: float = 0.08
     phase: Optional[float] = 0.0
-    period: float = 10.0
+    num_cores: float = 5.0
     core_width: float = 1.5
     wiggle_amp: float = 2.0
 
@@ -318,7 +415,7 @@ class ZigWaveguides(Sample):
             self.modulus,
             self.phase,
             offset=wiggle_offset,
-            period=self.period,
+            num_cores=self.num_cores,
             core_width=self.core_width,
         )
         return _apply_boundary_mask(eps, grid.x, grid.L)

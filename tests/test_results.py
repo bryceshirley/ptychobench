@@ -20,6 +20,11 @@ def sample_result():
             "FeitFleckOperator": 4.5e-5,
             "ParaxialOperator": 1.2e-4,
         },
+        max_error_detector={
+            "ExactOperator": 0.0,
+            "FeitFleckOperator": 3.2e-5,
+            "ParaxialOperator": 1.0e-4,
+        },
         rmse_detector={
             "ExactOperator": 0.0,
             "FeitFleckOperator": 3.2e-5,
@@ -89,6 +94,7 @@ def test_print_summary_no_errors(capsys):
     """Tests the fallback print statement when the errors dictionary is empty."""
     empty_result = BenchmarkResult(
         rmse_wavefield={},
+        max_error_detector={},
         rmse_detector={},
         sample_name="EmptySample",
         sample_params={},

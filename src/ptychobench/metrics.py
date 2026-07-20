@@ -58,3 +58,12 @@ def calculate_farfield_wave(
         raise ValueError(
             f"Invalid mode: {mode}. Choose from 'intensity', 'magnitude', or 'phase'."
         )
+
+
+def calculate_max_intensity_error(exact: np.ndarray, approx: np.ndarray) -> float:
+    """
+    Calculates the maximum absolute error between the intensity of the exit wave of the exact and approximate.
+    """
+    exact_intensity = calculate_farfield_wave(exact, mode="intensity")
+    approx_intensity = calculate_farfield_wave(approx, mode="intensity")
+    return np.max(np.abs(exact_intensity - approx_intensity))

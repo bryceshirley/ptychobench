@@ -11,6 +11,7 @@ The result object contains everything you need to reproduce the experiment and a
 | Property | Type | Description |
 | :--- | :--- | :--- |
 | **`rmse_wavefield`** | `dict` | A dictionary mapping the **Operator Class Name** (e.g., `'ParaxialOperator'`) to its calculated RMSE of the wavefield with the ground truth wavefield. |
+| **`max_error_detector`** | `dict` | A dictionary mapping the **Operator Class Name** (e.g., `'ParaxialOperator'`) to its calculated maximum error of the detector measurement with the ground truth detector measurement. |
 | **`rmse_detector`** | `dict` | A dictionary mapping the **Operator Class Name** (e.g., `'ParaxialOperator'`) to its calculated RMSE of the detector measurement with the ground truth detector measurement. |
 | **`sample_name`** | `str` | The name of the sample you tested (e.g., `'Apoferritin'`). |
 | **`sample_params`** | `dict` | A dictionary of the parameters you passed to the sample (e.g., `{'modulus': 0.8}`). |
