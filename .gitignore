@@ -30,3 +30,5 @@ src/*.egg-info/
 
 # Ignore notebook files
 *.ipynb
+
+/scripts/
