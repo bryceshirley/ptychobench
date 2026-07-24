@@ -419,3 +419,78 @@ class StandardMultisliceOperator(ForwardOperator):
 
         psi_propagated = torch.fft.ifftn(psi_k_propagated)
         return psi_propagated.detach().cpu().numpy()
+
+
+class StrangMultisliceOperator(ForwardOperator):
+    """
+    Second-order Strang splitting operator.
+    Symmetrically splits the propagation step: P(dz/2) * T(dz) * P(dz/2).
+    This guarantees second-order accuracy while keeping the exit wave
+    perfectly aligned with the slice boundary at the end of every step.
+    """
+
+    def __init__(self, grid):
+        super().__init__(grid)
+        self.name = "Strang_Multislice"
+
+        # Define a half-step propagator
+        self.half_propagator = torch.exp(self.dz_factor_val * self.M_diag / 2.0)
+
+    def _create_action_module(self):
+        return None
+
+    def _init_diagonals(self):
+        # Call base class to safely generate L_diag and the antialias_mask
+        super()._init_diagonals()
+
+        # OVERRIDE M_diag to include the Paraxial (Fresnel) / 2.0 approximation
+        kz_sq_over_k0_sq = 1.0 - (
+            torch.from_numpy(self.grid.K_sq.astype(np.float32)).to(DEVICE)
+            / (self.k0**2)
+        )
+        kz_sq_over_k0_sq = torch.where(
+            self.propagating_mask,
+            kz_sq_over_k0_sq,
+            torch.tensor(0.0, dtype=kz_sq_over_k0_sq.dtype, device=DEVICE),
+        )
+        self.M_diag = ((kz_sq_over_k0_sq - 1.0) / 2.0).to(torch.complex64)
+
+    def step(self, E, psi) -> np.ndarray:
+        if hasattr(E, "compute"):
+            E = E.compute()
+        E = np.asarray(E)
+
+        if hasattr(psi, "compute"):
+            psi = psi.compute()
+        psi = np.asarray(psi)
+
+        # Allow E to be complex if absorption is ever modeled
+        E_tensor = torch.from_numpy(
+            E.astype(np.complex64 if np.iscomplexobj(E) else np.float32)
+        ).to(DEVICE)
+        psi_tensor = torch.from_numpy(psi.astype(np.complex64)).to(DEVICE)
+
+        # --- 1. First Half-Propagation ---
+        psi_k = torch.fft.fftn(psi_tensor)
+        psi_half_prop = torch.fft.ifftn(
+            psi_k * self.antialias_mask * self.half_propagator
+        )
+
+        # --- 2. Full Transmission ---
+        transmission = torch.exp(self.dz_factor_val * E_tensor / 2.0)
+
+        # Abtem bandlimits the transmission function prior to interaction
+        T_k = torch.fft.fftn(transmission)
+        transmission_bandlimited = torch.fft.ifftn(T_k * self.antialias_mask)
+
+        psi_transmitted = psi_half_prop * transmission_bandlimited
+
+        # --- 3. Second Half-Propagation (Alignment Correction) ---
+        psi_k_trans = torch.fft.fftn(psi_transmitted)
+
+        # The final half-step aligns the wave back to the integer slice boundary
+        psi_final = torch.fft.ifftn(
+            psi_k_trans * self.antialias_mask * self.half_propagator
+        )
+
+        return psi_final.detach().cpu().numpy()
