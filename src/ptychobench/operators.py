@@ -26,8 +26,19 @@ class ForwardOperator(ABC):
 
     def step(self, E: np.ndarray, psi: np.ndarray) -> np.ndarray:
         """
-        Takes the environment matrix E and returns the propagation matrix P.
-        Must be implemented by all child classes.
+        Steps the wavefunction or field forward by one propagation step using the constructed operator.
+
+        Parameters
+        ----------
+        E : np.ndarray
+            The refractive index environment for the current step.
+        psi : np.ndarray
+            The current wavefunction or field to be propagated.
+        
+        Returns
+        -------
+        np.ndarray
+            The propagated wavefunction or field after applying the operator.
         """
         Q = self.construct_operator(E)
         return expm(self.dz_factor * Q).dot(psi)
