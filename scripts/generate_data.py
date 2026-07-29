@@ -9,6 +9,7 @@ from ptychobench.operators import (
 )  # Import the Operators
 
 import torch
+from torch.utils.data import Dataset
 
 def generate_data():
     # 1. Create a define simulation parameters
@@ -70,6 +71,15 @@ def generate_data():
     torch.save(data_dict, "simulation_data.pt")
 
 
+class PtychoDataset(Dataset):
+    def __init__(self, path):
+        data = torch.load(path)
+        self.psi_in = data['input_eps']
+        self.eps_in = data['input_psi']
+        self.psi_target = data['target_psi']
+        
+    def __len__(self): return len(self.psi_in)
+    def __getitem__(self, idx): return self.psi_in[idx], self.eps_in[idx], self.psi_target[idx]
 
 
 if __name__ == "__main__":
