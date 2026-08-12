@@ -34,32 +34,32 @@ def generate_data():
     feit_fleck_operator = FeitFleckOperator(grid)
 
     # Define inputs and targets for the model
-    total_samples = 2 # Total number of test cases
+    num_configs = 2  # How many times to draw a fresh set of random parameters
 
     num_sample_types = 3  # Apoferritin, StraightWaveguides, SharpStraightWaveguides
 
-    total_tests = total_samples * num_sample_types * grid.Nz  # samples * sample types * z-steps
-    input_eps = torch.zeros((total_tests, grid.N), dtype=torch.complex64)
-    input_psi = torch.zeros((total_tests, grid.N), dtype=torch.complex64)
-    target_psi = torch.zeros((total_tests, grid.N), dtype=torch.complex64)
-    baseline_psi = torch.zeros((total_tests, grid.N), dtype=torch.complex64)
+    num_examples = num_configs * num_sample_types * grid.Nz  # configs * sample types * z-steps
+    input_eps = torch.zeros((num_examples, grid.N), dtype=torch.complex64)
+    input_psi = torch.zeros((num_examples, grid.N), dtype=torch.complex64)
+    target_psi = torch.zeros((num_examples, grid.N), dtype=torch.complex64)
+    baseline_psi = torch.zeros((num_examples, grid.N), dtype=torch.complex64)
 
     # Create random parameters for each sample type to generate diverse test cases.
     # The modulus spans an order of magnitude, so the dataset covers both the weak
     # perturbations where Feit/Fleck is accurate and the strong ones where it fails
-    random_modulus_A = 0.01 + torch.rand(total_samples)*0.09  # Apoferritin's only tunable parameter, its geometry is fixed by the .npy file
+    random_modulus_A = 0.01 + torch.rand(num_configs)*0.09  # Apoferritin's only tunable parameter, its geometry is fixed by the .npy file
 
-    random_modulus_SW = 0.01 + torch.rand(total_samples)*0.09  # Strength of the StraightWaveguides' permittivity
-    random_num_cores_SW = torch.randint(2, 11, (total_samples,)).float()  # Number of waveguides across the domain (the spatial frequency)
-    random_core_frac_SW = 0.1 + torch.rand(total_samples)*0.3  # Width of each waveguide, as a fraction of the period
+    random_modulus_SW = 0.01 + torch.rand(num_configs)*0.09  # Strength of the StraightWaveguides' permittivity
+    random_num_cores_SW = torch.randint(2, 11, (num_configs,)).float()  # Number of waveguides across the domain (the spatial frequency)
+    random_core_frac_SW = 0.1 + torch.rand(num_configs)*0.3  # Width of each waveguide, as a fraction of the period
 
-    random_modulus_SSW = 0.01 + torch.rand(total_samples)*0.09  # Strength of the SharpStraightWaveguides' permittivity
-    random_num_cores_SSW = torch.randint(2, 11, (total_samples,)).float()  # Number of waveguides across the domain (the spatial frequency)
-    random_core_frac_SSW = 0.2 + torch.rand(total_samples)*0.4  # Width of each waveguide, as a fraction of the period
-    random_blur_SSW = torch.rand(total_samples)*4.0  # Gaussian softening of the sharp edges, in pixels
+    random_modulus_SSW = 0.01 + torch.rand(num_configs)*0.09  # Strength of the SharpStraightWaveguides' permittivity
+    random_num_cores_SSW = torch.randint(2, 11, (num_configs,)).float()  # Number of waveguides across the domain (the spatial frequency)
+    random_core_frac_SSW = 0.2 + torch.rand(num_configs)*0.4  # Width of each waveguide, as a fraction of the period
+    random_blur_SSW = torch.rand(num_configs)*4.0  # Gaussian softening of the sharp edges, in pixels
 
     idx = 0
-    for i in range(total_samples):
+    for i in range(num_configs):
         # 3. Work out the waveguide spacing, so the core width can be set relative to it
         period_SW = grid.L / random_num_cores_SW[i].item()  # Spacing between the StraightWaveguides
         period_SSW = grid.L / random_num_cores_SSW[i].item()  # Spacing between the SharpStraightWaveguides

@@ -21,7 +21,7 @@ SAVE_DIR = Path("scripts/results")
 # Must match the sample list in generate_data.py, in the same order
 SAMPLE_NAMES = ["Apoferritin", "StraightWaveguides", "SharpStraightWaveguides"]
 
-CONFIG = 0  # Which of the total_samples configurations to plot
+CONFIG = 0  # Which of the num_configs configurations to plot
 Z_STEP = 0  # Which z-step of that configuration to plot
 
 # Name the figure after what it shows, so different settings don't overwrite each other
