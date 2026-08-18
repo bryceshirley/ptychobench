@@ -12,6 +12,7 @@ wheels/
 
 results/
 build/
+wandb
 dist/
 *.egg-info/
 src/*.egg-info/
