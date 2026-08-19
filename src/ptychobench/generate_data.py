@@ -44,6 +44,12 @@ def generate_data():
     target_psi = torch.zeros((num_examples, grid.N), dtype=torch.complex64)
     baseline_psi = torch.zeros((num_examples, grid.N), dtype=torch.complex64)
 
+    # Record what each row is, so nothing downstream has to recompute it from the loop order
+    sample_names = []  # Which sample type the row came from
+    config_ids = []  # Which draw of random parameters
+    z_indices = []  # Which z-step, as an index
+    z_values = []  # Which z-step, as a position in nm
+
     # Create random parameters for each sample type to generate diverse test cases.
     # The modulus spans an order of magnitude, so the dataset covers both the weak
     # perturbations where Feit/Fleck is accurate and the strong ones where it fails
@@ -84,7 +90,7 @@ def generate_data():
             psi = grid.get_initial_field()  # Initial wavefunction, restarted at z = 0 for each new sample
 
             # 5. Get the sample's potential (epsilon) and the current wavefunction (psi)
-            for z in grid.z_steps:
+            for z_index, z in enumerate(grid.z_steps):
                 eps = sample.get_permittivity(grid, z)  # Sample's potential at this z
                 E = np.diag(eps)  # Turn epsilon into the environment matrix the operators expect
 
@@ -103,7 +109,13 @@ def generate_data():
                 target_psi[idx] = torch.from_numpy(psi_exact).to(torch.complex64)
                 baseline_psi[idx] = torch.from_numpy(psi_feit_fleck).to(torch.complex64)
 
-                # 10. Step the beam forward with the exact solution, so the next z-step
+                # 10. Label the row, so it can be found later without knowing the loop order
+                sample_names.append(type(sample).__name__)
+                config_ids.append(i)
+                z_indices.append(z_index)
+                z_values.append(float(z))
+
+                # 11. Step the beam forward with the exact solution, so the next z-step
                 #     starts from the true psi(z + dz)
                 psi = psi_exact
                 idx += 1
@@ -114,7 +126,11 @@ def generate_data():
                 "input_eps": input_eps,
                 "input_psi": input_psi,
                 "target_psi": target_psi,
-                "baseline_psi": baseline_psi
+                "baseline_psi": baseline_psi,
+                "sample_names": sample_names,
+                "config_ids": config_ids,
+                "z_indices": z_indices,
+                "z_values": z_values
         }
     torch.save(data_dict, "simulation_data.pt")
 

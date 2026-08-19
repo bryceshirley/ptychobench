@@ -18,9 +18,6 @@ from ptychobench.grid import SimulationGrid
 
 SAVE_DIR = Path("scripts/results")
 
-# Must match the sample list in generate_data.py, in the same order
-SAMPLE_NAMES = ["Apoferritin", "StraightWaveguides", "SharpStraightWaveguides"]
-
 CONFIG = 0  # Which of the num_configs configurations to plot
 Z_STEP = 0  # Which z-step of that configuration to plot
 
@@ -28,25 +25,39 @@ Z_STEP = 0  # Which z-step of that configuration to plot
 SAVE_PATH = SAVE_DIR / f"dataset_check_config{CONFIG}_zstep{Z_STEP}.png"
 
 
+def find_rows(data, config, z_step):
+    """
+    Returns the row index of every sample type at one configuration and z-step.
+
+    Reads the labels generate_data.py stored, so it does not depend on the order
+    the generation loops happened to run in.
+    """
+    return [
+        row
+        for row in range(len(data["sample_names"]))
+        if data["config_ids"][row] == config and data["z_indices"][row] == z_step
+    ]
+
+
 def inspect(path="simulation_data.pt", show=False):
-    data = torch.load(path, weights_only=False)
+    data = torch.load(path)
 
     grid = SimulationGrid(**data["grid_params"])
     eps, psi_in = data["input_eps"], data["input_psi"]
     psi_exact, psi_baseline = data["target_psi"], data["baseline_psi"]
 
-    n_types, Nz = len(SAMPLE_NAMES), grid.Nz
+    rows = find_rows(data, CONFIG, Z_STEP)
+    n_types = len(rows)
 
     # 1. Print a summary of every row in the dataset
-    print(f"{len(eps)} rows of {grid.N} pixels  (Nz={Nz}, {n_types} sample types)")
+    print(f"{len(eps)} rows of {grid.N} pixels  (Nz={grid.Nz}, {n_types} sample types)")
     print(f"{'row':>4}  {'sample':24}  {'z-step':>6}  {'max|eps|':>9}  {'residual':>9}")
     for row in range(len(eps)):
-        config, rem = divmod(row, n_types * Nz)
-        sample_type, z_step = divmod(rem, Nz)
+        z_step = data["z_indices"][row]
         # Relative error of the classical baseline against the exact solution
         residual = (psi_exact[row] - psi_baseline[row]).abs().norm() / psi_exact[row].abs().norm()
         print(
-            f"{row:>4}  {SAMPLE_NAMES[sample_type]:24}  {z_step:>6}  "
+            f"{row:>4}  {data['sample_names'][row]:24}  {z_step:>6}  "
             f"{eps[row].abs().max():>9.5f}  {residual:>9.3e}"
         )
 
@@ -54,8 +65,8 @@ def inspect(path="simulation_data.pt", show=False):
     fig, axes = plt.subplots(n_types, 3, figsize=(19, 3.2 * n_types))
     fig.suptitle(f"Dataset check - configuration {CONFIG}, z-step {Z_STEP}")
 
-    for sample_type, name in enumerate(SAMPLE_NAMES):
-        row = CONFIG * n_types * Nz + sample_type * Nz + Z_STEP
+    for sample_type, row in enumerate(rows):
+        name = data["sample_names"][row]
 
         # Left: the refractive index perturbation the beam passes through
         ax = axes[sample_type, 0]

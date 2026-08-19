@@ -17,6 +17,7 @@ from dataset import PtychoDataset
 
 LOSS_PLOT_PATH = Path("scripts/results/training_loss.png")
 GENERALISATION_PLOT_PATH = Path("scripts/results/generalisation.png")
+WEIGHTS_PATH = Path("scripts/results/fno_weights.pt")  # compare_operators.py loads the model from here
 SPLIT_SEED = 0  # Fixes which samples are held out, so "unseen" means the same thing every run
 WANDB_PROJECT = "ptychobench-fno"  # Every run of this script shows up under this project
 
@@ -203,6 +204,10 @@ if __name__ == "__main__":
     plot_generalisation(
         model, (features, targets), (unseen_features, unseen_targets)
     )
+
+    # Keep the trained weights, so compare_operators.py reuses this exact model
+    torch.save(model.state_dict(), WEIGHTS_PATH)
+    print(f"Saved weights to {WEIGHTS_PATH}")
 
     # The summary numbers and both figures, attached to this run
     wandb.log({
