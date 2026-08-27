@@ -9,9 +9,9 @@ from torch.utils.data import DataLoader, Dataset
 class PtychoDataset(Dataset):
     def __init__(self, path):
         data = torch.load(path)
-        self.psi_in = data['input_psi']
-        self.eps_in = data['input_eps']
-        self.psi_target = data['target_psi']
+        self.psi_in = data["input_psi"]
+        self.eps_in = data["input_eps"]
+        self.psi_target = data["target_psi"]
         assert len(self.psi_in) == len(self.eps_in) == len(self.psi_target)
 
     def __len__(self):

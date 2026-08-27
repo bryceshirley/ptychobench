@@ -67,11 +67,15 @@ def predict(model, dataset, row):
 
 
 def compare(path=DATA_PATH, config=CONFIG, z_step=Z_STEP):
-    data = torch.load(path)#fetch complex wavefields and eps tensorsfor plotting
-    dataset = PtychoDataset(path)#fetch real tensors for FNO input and output
+    data = torch.load(path)  # fetch complex wavefields and eps tensorsfor plotting
+    dataset = PtychoDataset(path)  # fetch real tensors for FNO input and output
 
     grid = SimulationGrid(**data["grid_params"])
-    eps, psi_exact, psi_baseline = data["input_eps"], data["target_psi"], data["baseline_psi"]
+    eps, psi_exact, psi_baseline = (
+        data["input_eps"],
+        data["target_psi"],
+        data["baseline_psi"],
+    )
 
     # Reproduce the split train_fno.py uses, obtain the 8 rows of trained dataset so each row can be labelled
     generator = torch.Generator().manual_seed(SPLIT_SEED)
@@ -84,7 +88,9 @@ def compare(path=DATA_PATH, config=CONFIG, z_step=Z_STEP):
 
     rows = find_rows(data, config, z_step)
     fig, axes = plt.subplots(len(rows), 4, figsize=(25, 3.4 * len(rows)))
-    fig.suptitle(f"Operator comparison - configuration {config}, z-step {z_step}", fontsize=14)
+    fig.suptitle(
+        f"Operator comparison - configuration {config}, z-step {z_step}", fontsize=14
+    )
 
     print(f"\n{'sample':24}  {'seen?':7}  {'Feit/Fleck':>11}  {'FNO':>11}")
     for sample_type, row in enumerate(rows):

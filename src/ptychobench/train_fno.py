@@ -17,9 +17,15 @@ from dataset import PtychoDataset
 
 LOSS_PLOT_PATH = Path("scripts/results/training_loss.png")
 GENERALISATION_PLOT_PATH = Path("scripts/results/generalisation.png")
-WEIGHTS_PATH = Path("scripts/results/fno_weights.pt")  # compare_operators.py loads the model from here
-SPLIT_SEED = 0  # Fixes which samples are held out, so "unseen" means the same thing every run
-WANDB_PROJECT = "ptychobench-fno"  # Every run of this script shows up under this project
+WEIGHTS_PATH = Path(
+    "scripts/results/fno_weights.pt"
+)  # compare_operators.py loads the model from here
+SPLIT_SEED = (
+    0  # Fixes which samples are held out, so "unseen" means the same thing every run
+)
+WANDB_PROJECT = (
+    "ptychobench-fno"  # Every run of this script shows up under this project
+)
 
 # The channel counts come straight from what PtychoDataset serves:
 #   input  [Real(psi), Imag(psi), eps]        -> 3 channels
@@ -62,7 +68,9 @@ def build_optimizer(model):
     return torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
 
-def train_single_batch(model, loss_fn, optimizer, features, targets, num_epochs=NUM_EPOCHS):
+def train_single_batch(
+    model, loss_fn, optimizer, features, targets, num_epochs=NUM_EPOCHS
+):
     """
     3. Trains on one fixed batch, giving the model every chance to memorise it.
 
@@ -77,7 +85,9 @@ def train_single_batch(model, loss_fn, optimizer, features, targets, num_epochs=
     for epoch in range(num_epochs):
         optimizer.zero_grad()  # Gradients accumulate by default, so clear them first
         prediction = model(features)
-        loss = loss_fn(prediction, targets)  # The model as it stands at the start of this epoch
+        loss = loss_fn(
+            prediction, targets
+        )  # The model as it stands at the start of this epoch
         loss.backward()  # Work out how each parameter affected the loss
         optimizer.step()  # Nudge the parameters in the direction that lowers it
 
@@ -124,7 +134,9 @@ def evaluate(model, loss_fn, features, targets):
         return loss_fn(model(features), targets).item()
 
 
-def plot_generalisation(model, train_batch, unseen_batch, path=GENERALISATION_PLOT_PATH):
+def plot_generalisation(
+    model, train_batch, unseen_batch, path=GENERALISATION_PLOT_PATH
+):
     """5. Compares predictions against the truth, for a trained sample and an unseen one."""
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -178,9 +190,13 @@ if __name__ == "__main__":
 
     # One fixed batch to train on, and one batch of everything held back
     features, targets = next(iter(DataLoader(train_set, batch_size=BATCH_SIZE)))
-    unseen_features, unseen_targets = next(iter(DataLoader(unseen_set, batch_size=len(unseen_set))))
+    unseen_features, unseen_targets = next(
+        iter(DataLoader(unseen_set, batch_size=len(unseen_set)))
+    )
 
-    print(f"Training on a single batch of {len(features)} samples for {NUM_EPOCHS} epochs")
+    print(
+        f"Training on a single batch of {len(features)} samples for {NUM_EPOCHS} epochs"
+    )
     print(f"Holding back {len(unseen_features)} samples the model never sees")
     print(f"Input {tuple(features.shape)} -> target {tuple(targets.shape)}\n")
 
@@ -201,21 +217,21 @@ if __name__ == "__main__":
     print(f"  on unseen data:        {unseen_loss:.4f}")
     print(f"  the model is {unseen_loss / train_loss:.1f}x worse on data it never saw")
 
-    plot_generalisation(
-        model, (features, targets), (unseen_features, unseen_targets)
-    )
+    plot_generalisation(model, (features, targets), (unseen_features, unseen_targets))
 
     # Keep the trained weights, so compare_operators.py reuses this exact model
     torch.save(model.state_dict(), WEIGHTS_PATH)
     print(f"Saved weights to {WEIGHTS_PATH}")
 
     # The summary numbers and both figures, attached to this run
-    wandb.log({
-        "final/train_loss": train_loss,
-        "final/unseen_loss": unseen_loss,
-        "final/generalisation_gap": unseen_loss / train_loss,
-        "final/best_loss": min(losses),
-        "loss_curve": wandb.Image(str(LOSS_PLOT_PATH)),
-        "generalisation": wandb.Image(str(GENERALISATION_PLOT_PATH)),
-    })
+    wandb.log(
+        {
+            "final/train_loss": train_loss,
+            "final/unseen_loss": unseen_loss,
+            "final/generalisation_gap": unseen_loss / train_loss,
+            "final/best_loss": min(losses),
+            "loss_curve": wandb.Image(str(LOSS_PLOT_PATH)),
+            "generalisation": wandb.Image(str(GENERALISATION_PLOT_PATH)),
+        }
+    )
     wandb.finish()

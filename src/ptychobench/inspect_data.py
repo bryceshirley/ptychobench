@@ -55,7 +55,9 @@ def inspect(path="simulation_data.pt", show=False):
     for row in range(len(eps)):
         z_step = data["z_indices"][row]
         # Relative error of the classical baseline against the exact solution
-        residual = (psi_exact[row] - psi_baseline[row]).abs().norm() / psi_exact[row].abs().norm()
+        residual = (psi_exact[row] - psi_baseline[row]).abs().norm() / psi_exact[
+            row
+        ].abs().norm()
         print(
             f"{row:>4}  {data['sample_names'][row]:24}  {z_step:>6}  "
             f"{eps[row].abs().max():>9.5f}  {residual:>9.3e}"
@@ -79,7 +81,9 @@ def inspect(path="simulation_data.pt", show=False):
         ax = axes[sample_type, 1]
         ax.plot(grid.x, np.abs(psi_in[row].numpy()), label="input psi(z)")
         ax.plot(grid.x, np.abs(psi_exact[row].numpy()), "--", label="exact psi(z+dz)")
-        ax.plot(grid.x, np.abs(psi_baseline[row].numpy()), ":", label="Feit/Fleck psi(z+dz)")
+        ax.plot(
+            grid.x, np.abs(psi_baseline[row].numpy()), ":", label="Feit/Fleck psi(z+dz)"
+        )
         ax.set_title(f"{name}: |psi|")
         ax.set_xlabel("x (nm)")
         ax.legend(fontsize=8)
@@ -91,7 +95,12 @@ def inspect(path="simulation_data.pt", show=False):
         ax = axes[sample_type, 2]
         ax.plot(grid.x, np.angle(psi_in[row].numpy()), label="input psi(z)")
         ax.plot(grid.x, np.angle(psi_exact[row].numpy()), "--", label="exact psi(z+dz)")
-        ax.plot(grid.x, np.angle(psi_baseline[row].numpy()), ":", label="Feit/Fleck psi(z+dz)")
+        ax.plot(
+            grid.x,
+            np.angle(psi_baseline[row].numpy()),
+            ":",
+            label="Feit/Fleck psi(z+dz)",
+        )
         ax.set_title(f"{name}: arg(psi)  [rad, wrapped to (-pi, pi]]")
         ax.set_xlabel("x (nm)")
         ax.legend(fontsize=8)
