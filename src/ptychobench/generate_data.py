@@ -12,6 +12,8 @@ from ptychobench.operators import (
 import numpy as np
 import torch
 
+from dataset import DATA_PATH
+
 
 def generate_data():
     # 1. Create a define simulation parameters
@@ -161,7 +163,9 @@ def generate_data():
         "z_indices": z_indices,
         "z_values": z_values,
     }
-    torch.save(data_dict, "simulation_data.pt")
+    DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(data_dict, DATA_PATH)
+    print(f"Saved {num_examples} rows to {DATA_PATH}")
 
 
 if __name__ == "__main__":

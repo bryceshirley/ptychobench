@@ -182,7 +182,7 @@ if __name__ == "__main__":
     optimizer = build_optimizer(model)
 
     # Hold some samples back, so there is something the model has genuinely never seen
-    dataset = PtychoDataset("simulation_data.pt")
+    dataset = PtychoDataset()
     generator = torch.Generator().manual_seed(SPLIT_SEED)
     train_set, unseen_set = random_split(
         dataset, [BATCH_SIZE, len(dataset) - BATCH_SIZE], generator=generator

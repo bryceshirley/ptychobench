@@ -2,12 +2,18 @@
 PyTorch Dataset for the simulation data written by generate_data.py.
 """
 
+from pathlib import Path
+
 import torch
 from torch.utils.data import DataLoader, Dataset
 
+DATA_PATH = Path(
+    "scripts/data/simulation_data.pt"
+)  # Where generate_data.py writes the dataset
+
 
 class PtychoDataset(Dataset):
-    def __init__(self, path):
+    def __init__(self, path=DATA_PATH):
         data = torch.load(path)
         self.psi_in = data["input_psi"]
         self.eps_in = data["input_eps"]
@@ -26,7 +32,7 @@ class PtychoDataset(Dataset):
 
 
 if __name__ == "__main__":
-    training_data = PtychoDataset("simulation_data.pt")
+    training_data = PtychoDataset()
     train_dataloader = DataLoader(training_data, batch_size=16, shuffle=True)
 
     train_features, train_targets = next(iter(train_dataloader))

@@ -4,7 +4,7 @@ Quick visual check of the dataset written by generate_data.py.
 The figure is saved to scripts/results/. Pass --show to open it in a window as well.
 
 Usage:
-    python scripts/inspect_data.py [path/to/simulation_data.pt] [--show]
+    python src/ptychobench/inspect_data.py [path/to/simulation_data.pt] [--show]
 """
 
 import sys
@@ -14,6 +14,7 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
+from dataset import DATA_PATH
 from ptychobench.grid import SimulationGrid
 
 SAVE_DIR = Path("scripts/results")
@@ -39,7 +40,7 @@ def find_rows(data, config, z_step):
     ]
 
 
-def inspect(path="simulation_data.pt", show=False):
+def inspect(path=DATA_PATH, show=False):
     data = torch.load(path)
 
     grid = SimulationGrid(**data["grid_params"])
@@ -121,6 +122,6 @@ def inspect(path="simulation_data.pt", show=False):
 if __name__ == "__main__":
     args = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
     inspect(
-        args[0] if args else "simulation_data.pt",
+        args[0] if args else DATA_PATH,
         show="--show" in sys.argv,
     )

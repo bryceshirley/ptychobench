@@ -41,6 +41,7 @@ nav:
       - Simulation Grid: simulation_grid.md
       - Samples Guide: samples_guide.md
       - Results Guide: results_guide.md
+      - Training Data Guide: training_data_guide.md
   - References:
       - Physics Simulation: physics_simulation.md
       - API Reference: api_reference.md

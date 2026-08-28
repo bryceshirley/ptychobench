@@ -17,11 +17,10 @@ import numpy as np
 import torch
 from torch.utils.data import random_split
 
-from dataset import PtychoDataset
+from dataset import DATA_PATH, PtychoDataset
 from ptychobench.grid import SimulationGrid
 from train_fno import BATCH_SIZE, SPLIT_SEED, WEIGHTS_PATH, build_model
 
-DATA_PATH = "simulation_data.pt"
 SAVE_DIR = Path("scripts/results")
 
 CONFIG = 0  # Which of the num_configs configurations to plot, overridable on the command line

@@ -11,6 +11,8 @@ wheels/
 .venv
 
 results/
+# mkdocs build output
+site/
 build/
 wandb
 dist/
