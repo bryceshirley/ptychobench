@@ -5,6 +5,8 @@ is checked against `scipy.linalg.expm` / `sqrtm` applied to the full matrix,
 not against a previously recorded number.
 """
 
+import warnings
+
 import numpy as np
 import pytest
 import scipy.linalg
@@ -372,3 +374,93 @@ def test_krylov_runs_on_every_backend(hermitian, v, backend_name):
     assert float(np.linalg.norm(got - reference)) < eps**0.5 * float(
         np.linalg.norm(reference)
     )
+
+
+# --- Truncation at max_iter ---
+#
+# The propagation operators are exponentiated as exp(i k0 dz H), so the matrix
+# handed to Arnoldi is skew-Hermitian and its exponential is unitary. That is
+# the case these use: a scaled *Hermitian* matrix underflows expm instead, which
+# makes the first-order estimate fire spuriously and tests the wrong thing.
+
+
+@pytest.fixture
+def skew(hermitian):
+    """i * H -- skew-Hermitian, so exp of it is unitary, as in a propagation."""
+    return 1j * hermitian
+
+
+@pytest.mark.parametrize("scale", [1.0, 200.0])
+@pytest.mark.parametrize(
+    "max_iter, expect_warning",
+    [
+        # Well short of the space: the estimate never comes down.
+        (6, True),
+        # The full 24 dimensions, where the projection is exact by construction.
+        (24, False),
+    ],
+)
+def test_running_out_of_iterations_is_reported(
+    skew, v, scale, max_iter, expect_warning
+):
+    """Truncating at max_iter must not pass for convergence.
+
+    The returned vector has the right shape, a plausible norm and no nans, so a
+    silent return is indistinguishable from a converged one -- while being wrong
+    by order one rather than by `tol`.
+    """
+    matvec = _matvec(scale * skew)
+
+    if expect_warning:
+        with pytest.warns(RuntimeWarning, match="max_iter"):
+            krylov_funm(matvec, v, scipy.linalg.expm, max_iter=max_iter, tol=1e-12)
+    else:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            krylov_funm(matvec, v, scipy.linalg.expm, max_iter=max_iter, tol=1e-12)
+
+
+def test_a_truncated_result_is_wrong_by_order_one(skew, v):
+    """The reason the warning has to exist: the error is not of order `tol`."""
+    A = 200.0 * skew
+    reference = scipy.linalg.expm(A) @ v
+
+    with pytest.warns(RuntimeWarning, match="max_iter"):
+        truncated = krylov_funm(_matvec(A), v, scipy.linalg.expm, max_iter=6, tol=1e-12)
+
+    relative = np.linalg.norm(truncated - reference) / np.linalg.norm(reference)
+    assert relative > 1e-3, "expected an order-one error, not one of order tol"
+
+
+def test_a_converged_run_agrees_with_the_dense_reference(skew, v):
+    """The complement: given enough room, no warning and agreement with dense."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        got = krylov_funm(_matvec(skew), v, scipy.linalg.expm, max_iter=24, tol=1e-10)
+
+    np.testing.assert_allclose(got, scipy.linalg.expm(skew) @ v, rtol=1e-8, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "stop_given, expected",
+    [
+        # No stop test: reaching max_iter is exactly what was asked for.
+        (False, True),
+        # With one, reaching max_iter means it was never satisfied.
+        (True, False),
+    ],
+)
+def test_arnoldi_records_why_it_stopped(skew, v, stop_given, expected):
+    result = arnoldi(
+        _matvec(200.0 * skew),
+        v,
+        max_iter=6,
+        stop=_expm_stop(1e-12) if stop_given else None,
+    )
+    assert result.converged is expected
+
+
+def test_breakdown_counts_as_converged(v):
+    """A happy breakdown is exact, so it must not be reported as truncation."""
+    result = arnoldi(_matvec(np.eye(len(v))), v, max_iter=8, stop=_expm_stop(0.0))
+    assert result.breakdown and result.converged

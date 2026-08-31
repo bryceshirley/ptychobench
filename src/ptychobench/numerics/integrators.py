@@ -114,6 +114,18 @@ class ArnoldiResult(NamedTuple):
     breakdown : bool
         True if the recurrence terminated because the subspace became
         ``A``-invariant. This is *success*: the projection is then exact.
+    converged : bool
+        True if the recurrence stopped for a reason of its own -- breakdown, or
+        ``stop`` reporting satisfaction -- and False if it merely ran out of
+        iterations with ``stop`` still unsatisfied. With no ``stop`` supplied
+        there is nothing being tested, so reaching ``max_iter`` is the
+        requested outcome and this is True.
+
+        The distinction matters because the two are indistinguishable from
+        ``size`` alone: a subspace truncated at ``max_iter`` looks exactly like
+        one that converged on the final step, and the projection in the first
+        case can be wrong by ``O(1)`` while carrying no other sign of it. See
+        :func:`krylov_funm`, which turns a False here into a warning.
 
     Notes
     -----
@@ -130,6 +142,7 @@ class ArnoldiResult(NamedTuple):
     size: int
     beta: float
     breakdown: bool
+    converged: bool = True
 
 
 def arnoldi(
@@ -218,6 +231,9 @@ def arnoldi(
 
     size = m_max
     breakdown = False
+    # With no stop test there is nothing to be unsatisfied, so running the full
+    # m_max steps is the requested outcome rather than a truncation.
+    converged = stop is None
 
     for j in range(m_max):
         if j > 0:
@@ -241,6 +257,7 @@ def arnoldi(
             # keeps the Arnoldi identity true rather than merely unchecked.
             size = j + 1
             breakdown = True
+            converged = True
             break
 
         hessenberg[j + 1, j] = h_next
@@ -248,6 +265,7 @@ def arnoldi(
 
         if stop is not None and stop(hessenberg[: j + 1, : j + 1], h_next, j + 1):
             size = j + 1
+            converged = True
             break
 
     return ArnoldiResult(
@@ -256,6 +274,7 @@ def arnoldi(
         size=size,
         beta=beta,
         breakdown=breakdown,
+        converged=converged,
     )
 
 
@@ -359,8 +378,25 @@ def krylov_funm(
         If the convergence estimate is not finite, which means ``f(H)``
         produced a nan or an inf.
 
+    Warns
+    -----
+    RuntimeWarning
+        If the iteration reaches ``max_iter`` with the estimate still above
+        ``tol``. The result is returned anyway, because a truncated projection
+        is sometimes what the caller wants, but it is *not* accurate to ``tol``
+        and nothing else about it would say so.
+
     Notes
     -----
+    **When ``max_iter`` is not enough.** The subspace dimension needed grows
+    with the scale of ``A``, not with ``N``: the exponential of a strongly
+    scaled generator has to be resolved over the whole spread of ``i*k0*dz*H``,
+    and a subspace too small for it is wrong by order one rather than by a
+    little. The default 30 suits a mildly scaled operator; a step with a large
+    ``k0 * dz`` can need several hundred, at which point the dense path is
+    usually cheaper as well as exact. The warning above is what tells the two
+    situations apart.
+
     **The stopping criterion.** The a-posteriori estimate of the absolute error
     is ``||v|| * h_{m+1,m} * |f(H_m)_{m,1}|`` [1]_; dividing through by
     ``||v||`` gives the quantity compared against ``tol``, which is why ``tol``
@@ -386,6 +422,27 @@ def krylov_funm(
 
     m = result.size
     fH = f(result.hessenberg[:m, :m])
+
+    if not result.converged:
+        # The subspace ran out before the estimate came down. Nothing else about
+        # the return value says so -- it has the right shape, the right norm to
+        # within the projection, and no nans -- so without this the caller gets
+        # a silently wrong answer. That is the whole failure mode: for a strongly
+        # scaled generator, exp on a subspace too small for it is not slightly
+        # off, it is O(1) off.
+        estimate = abs(complex(result.hessenberg[m, m - 1])) * abs(
+            complex(np.asarray(fH)[m - 1, 0])
+        )
+        warnings.warn(
+            f"the Krylov iteration reached max_iter={max_iter} with the "
+            f"convergence estimate at {estimate:.3e}, still above tol={tol:.3e}; "
+            f"f(A)v is truncated and may be wrong by order one, not by tol. "
+            f"Raise max_iter, loosen tol, or use the dense path -- and note "
+            f"that a strongly scaled A (a large ||A||, e.g. a big k0*dz) needs "
+            f"a subspace dimension that grows with it.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
 
     # beta * V_m f(H_m) e_1, with the basis stored one vector per row.
     y = np.asarray(fH)[:m, 0] * result.beta
