@@ -1,12 +1,41 @@
 # .pre-commit-config.yaml
 repos:
+  # Keep large binaries out of the history. Only files being *added* are
+  # checked, so the notebooks and the presentation already tracked here are
+  # unaffected -- this is a guard against new bloat, not a retroactive audit.
+  # An executed notebook clears 500 KB easily, so strip outputs before adding
+  # one rather than raising the limit.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: [--maxkb=500]
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Ensure this matches the version of ruff in your environment, 
-    # or use 'v0.4.4' / a specific recent version tag.
-    rev: v0.4.4 
+    # Keep this in step with the ruff pin in pyproject.toml. When the two drift
+    # the hook and `uv run ruff format .` reformat each other's output.
+    rev: v0.15.18
     hooks:
       # Run the linter.
       - id: ruff
         args: [ --fix ]
       # Run the formatter.
       - id: ruff-format
+
+  # Docstring format. Checks src/ against the numpydoc standard; the check list
+  # and the exclusions live in [tool.numpydoc_validation] in pyproject.toml.
+  # Tests and examples are out of scope -- a test name is its own summary.
+  - repo: https://github.com/numpy/numpydoc
+    rev: v1.10.0
+    hooks:
+      - id: numpydoc-validation
+        files: ^src/
+
+  - repo: local
+    hooks:
+      - id: ty
+        name: ty
+        entry: uv run ty check .
+        language: system
+        pass_filenames: false
+        always_run: true

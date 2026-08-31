@@ -4,10 +4,11 @@ from scipy.linalg import sqrtm
 
 # Adjust import based on your actual project structure
 from ptychobench.operators import (
-    ExactOperator,
+    GroundTruthOperator,
     ParaxialOperator,
     FeitFleckOperator,
     LinDudaOperator,
+    YevickThomsonOperator,
 )
 
 # --- MOCK OBJECTS FOR ISOLATED TESTING ---
@@ -56,7 +57,7 @@ def dummy_E():
 def test_operator_initialization(grid):
     """Test that all operators initialize correctly with expected names."""
     ops = [
-        (ExactOperator(grid), "Exact"),
+        (GroundTruthOperator(grid), "Ground Truth"),
         (ParaxialOperator(grid), "Paraxial"),
         (FeitFleckOperator(grid), "Feit/Fleck"),
         (LinDudaOperator(grid), "Lin/Duda"),
@@ -71,7 +72,7 @@ def test_operator_initialization(grid):
 def test_operator_step_output_shape(grid, dummy_E):
     """Test that the step method returns a matrix of the correct shape and type."""
     operators = [
-        ExactOperator(grid),
+        GroundTruthOperator(grid),
         ParaxialOperator(grid),
         FeitFleckOperator(grid),
         LinDudaOperator(grid),
@@ -97,7 +98,7 @@ def test_trivial_propagation(grid):
     E_zero = np.zeros((grid.N, grid.N))
 
     operators = [
-        ExactOperator(grid),
+        GroundTruthOperator(grid),
         ParaxialOperator(grid),
         FeitFleckOperator(grid),
         LinDudaOperator(grid),
@@ -117,3 +118,48 @@ def test_trivial_propagation(grid):
             atol=1e-10,
             err_msg=f"{op.name} failed trivial propagation check",
         )
+
+
+@pytest.mark.parametrize(
+    "OpClass, integrator",
+    [
+        (GroundTruthOperator, "krylov"),
+        (ParaxialOperator, "krylov"),
+        (ParaxialOperator, "split-step"),
+        (FeitFleckOperator, "krylov"),
+        (FeitFleckOperator, "split-step"),
+        (YevickThomsonOperator, "krylov"),
+        (LinDudaOperator, "krylov"),
+    ],
+    ids=lambda p: p if isinstance(p, str) else p.__name__,
+)
+def test_a_matrix_free_run_allocates_no_dense_matrix(OpClass, integrator, grid):
+    """The dense N x N scratch matrices are only ever read by the dense path.
+
+    Building them in __init__ meant a Krylov or split-step run paid for
+    matrices it never touched -- 1 GB and 33 seconds *per operator* at
+    N = 8192, which defeats the entire point of being matrix-free. Every one
+    of them is a cached_property now, so nothing is allocated until something
+    actually asks for it.
+
+    Checked over every operator rather than the two that had it first: each
+    class names its own matrices, so this is exactly the kind of thing that
+    gets fixed in one place and reintroduced in the next.
+    """
+    operator = OpClass(grid, integrator=integrator)
+
+    dense = {
+        name: value
+        for name, value in vars(operator).items()
+        if isinstance(value, np.ndarray) and value.ndim == 2
+    }
+    assert dense == {}, f"{OpClass.__name__} eagerly built {sorted(dense)}"
+
+
+def test_the_dense_matrices_are_still_built_once_for_the_dense_path(grid):
+    """Lazy, not absent -- and cached, so the dense path pays only on first use."""
+    exact = GroundTruthOperator(grid)
+
+    assert exact.I.shape == (grid.N, grid.N)
+    assert exact.I is exact.I
+    assert exact.I_plus_M is exact.I_plus_M

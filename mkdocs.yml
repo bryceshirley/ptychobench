@@ -18,6 +18,15 @@ theme:
 markdown_extensions:
   - pymdownx.arithmatex:
       generic: true
+  # Mermaid diagrams. The custom fence hands a ```mermaid block through as a
+  # <pre class="mermaid"> rather than a code block, which is the hook Material
+  # looks for before it pulls in mermaid.js. Without this a diagram renders as
+  # its own source text.
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
 
 extra_javascript:
   - javascripts/mathjax.js
@@ -33,8 +42,6 @@ nav:
       - Samples Guide: samples_guide.md
       - Results Guide: results_guide.md
   - References:
-      - Markdown Cheat Sheet: using_markdown.md
-      - Error Metrics: error_metrics.md
-      - Testing Error Metrics: testing_error_metrics.md
       - Physics Simulation: physics_simulation.md
+      - API Reference: api_reference.md
       - Technical Theory: technical.md

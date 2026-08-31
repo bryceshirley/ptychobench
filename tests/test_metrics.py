@@ -33,9 +33,13 @@ Good code doesn't just calculate the right answer; it handles bad inputs safely
 by raising clear errors.
 """
 
-from ptychobench.metrics import (
+import pytest
+
+from ptychobench.numerics.metrics import (
     calculate_rmse,
     calculate_farfield_wave,
+    calculate_max_error,
+    calculate_max_intensity_error,
     calculate_rmse_intensity,
 )
 import numpy as np
@@ -73,22 +77,71 @@ def test_rmse_known_real_difference():
 #      calculate_rmse(exact, approx)
 
 
-def test_calculate_rmse_intensity_identical_arrays():
-    list = np.array([8.0, 16.0, 22.0])
-    assert 0.0 == calculate_rmse_intensity(list, list)
+def test_rmse_of_complex_arrays_uses_the_magnitude_of_the_difference():
+    """Wavefields are complex, so the error is |exact - approx|, not the
+    difference of the real parts. A 3-4-5 triangle makes that visible: a
+    difference of 3 + 4j has magnitude 5, which the real part alone would miss.
+    """
+    exact = np.array([3.0 + 4.0j])
+    approx = np.array([0.0 + 0.0j])
+    assert 5.0 == calculate_rmse(exact, approx)
+
+
+#: Each far-field wrapper and the plain metric it is the far-field form of.
+#: Kept as a pair because that is the invariant: a wrapper transforms both
+#: arguments and delegates, so it must agree with transforming first and calling
+#: the plain form -- which is the cheaper route `run_benchmark` takes, and the
+#: only thing keeping the two paths from drifting apart.
+INTENSITY_PAIRS = [
+    (calculate_rmse_intensity, calculate_rmse),
+    (calculate_max_intensity_error, calculate_max_error),
+]
+
+
+@pytest.mark.parametrize("wrapper, plain", INTENSITY_PAIRS, ids=lambda f: f.__name__)
+def test_the_far_field_metrics_are_zero_for_identical_arrays(wrapper, plain):
+    values = np.array([8.0, 16.0, 22.0])
+    assert 0.0 == wrapper(values, values)
+
+
+@pytest.mark.parametrize("wrapper, plain", INTENSITY_PAIRS, ids=lambda f: f.__name__)
+def test_the_far_field_wrapper_agrees_with_transforming_first(wrapper, plain):
+    exact = np.array([8.0, 16.0, 22.0])
+    approx = np.array([8.0, 12.0, 120.0])
+
+    expected = plain(
+        calculate_farfield_wave(exact, mode="intensity"),
+        calculate_farfield_wave(approx, mode="intensity"),
+    )
+    assert wrapper(exact, approx) == expected
+    assert expected > 0.0
 
 
 def test_zero_intensity():
     list = np.array([0.0, 0.0, 0.0])
-    assert 0.0 == sum(calculate_farfield_wave(list))
-
-
-def test_calculate_rmse_intensity_error():
-    list_x = np.array([8.0, 16.0, 22.0])
-    list_y = np.array([8.0, 12.0, 120.0])
-    assert calculate_rmse_intensity(list_x, list_y) > 0.0
+    assert 0.0 == np.sum(calculate_farfield_wave(list))
 
 
 def test_non_zero_intensity():
     list_x = np.array([8.0, 16.0, 22.0])
-    assert sum(calculate_farfield_wave(list_x)) > 0.0
+    assert np.sum(calculate_farfield_wave(list_x)) > 0.0
+
+
+# ------------------------------------------------------------------------------
+# Backends
+# ------------------------------------------------------------------------------
+# test_rmse_identical_arrays above passes integer arrays, which NumPy quietly
+# promotes on `mean`. The Array API leaves `mean` undefined for integers and
+# torch raises outright, so the same two lines are worth running on a second
+# backend -- otherwise the promotion NumPy does for free reads as behaviour the
+# package provides.
+
+
+def test_rmse_of_integer_arrays_works_on_any_backend():
+    """An RMSE is a real number whatever was differenced."""
+    torch = pytest.importorskip("torch", reason="the torch backend is optional")
+
+    exact = torch.asarray([4, 4, 2])
+    approx = torch.asarray([2, 6, 0])
+
+    assert calculate_rmse(exact, approx) == 2.0
