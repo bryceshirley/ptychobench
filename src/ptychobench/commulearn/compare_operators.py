@@ -17,9 +17,14 @@ import numpy as np
 import torch
 from torch.utils.data import random_split
 
-from dataset import DATA_PATH, PtychoDataset
+from ptychobench.commulearn.dataset import DATA_PATH, PtychoDataset
 from ptychobench.grid import SimulationGrid
-from train_fno import BATCH_SIZE, SPLIT_SEED, WEIGHTS_PATH, build_model
+from ptychobench.commulearn.train_fno import (
+    BATCH_SIZE,
+    SPLIT_SEED,
+    WEIGHTS_PATH,
+    build_model,
+)
 
 SAVE_DIR = Path("scripts/results")
 

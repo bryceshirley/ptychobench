@@ -13,7 +13,7 @@ from neuralop.losses import LpLoss
 from neuralop.models import FNO
 from torch.utils.data import DataLoader, random_split
 
-from dataset import PtychoDataset
+from ptychobench.commulearn.dataset import PtychoDataset
 
 LOSS_PLOT_PATH = Path("scripts/results/training_loss.png")
 GENERALISATION_PLOT_PATH = Path("scripts/results/generalisation.png")

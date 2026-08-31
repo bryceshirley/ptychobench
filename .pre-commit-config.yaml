@@ -25,11 +25,17 @@ repos:
   # Docstring format. Checks src/ against the numpydoc standard; the check list
   # and the exclusions live in [tool.numpydoc_validation] in pyproject.toml.
   # Tests and examples are out of scope -- a test name is its own summary.
+  #
+  # commulearn is excluded too. It is a set of student-facing scripts driving
+  # the FNO pipeline rather than library API, and it only lives under src/ so
+  # that it can import the package alongside it. Holding a teaching script to
+  # the same docstring contract as an operator would be noise.
   - repo: https://github.com/numpy/numpydoc
     rev: v1.10.0
     hooks:
       - id: numpydoc-validation
         files: ^src/
+        exclude: ^src/ptychobench/commulearn/
 
   - repo: local
     hooks:

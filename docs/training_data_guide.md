@@ -38,7 +38,7 @@ The core width is drawn as a fraction of the waveguide period rather than as an 
 **Usage:**
 
 ```bash
-python src/ptychobench/generate_data.py
+python src/ptychobench/commulearn/generate_data.py
 ```
 
 **Output:**
@@ -57,7 +57,7 @@ The dataset has `num_configs * 3 * Nz` rows. With the defaults that is 12.
 | :--- | :--- | :--- |
 | **`input_psi`** | `Tensor` | The wavefield entering the step, psi(z). A model input. |
 | **`input_eps`** | `Tensor` | The refractive index perturbation epsilon at that z. A model input. |
-| **`target_psi`** | `Tensor` | The ground truth psi(z + dz), from `ExactOperator`. The training target. |
+| **`target_psi`** | `Tensor` | The ground truth psi(z + dz), from `GroundTruthOperator`. The training target. |
 | **`baseline_psi`** | `Tensor` | The classical prediction from `FeitFleckOperator`, stepped from the same psi so the residual is well defined. |
 | **`grid_params`** | `dict` | The settings used, so the `SimulationGrid` can be rebuilt on load. |
 | **`sample_names`** | `list[str]` | Which sample type each row came from. |
@@ -81,7 +81,7 @@ Before training on it, it is worth looking at what came out. `inspect_data.py` p
 **Usage:**
 
 ```bash
-python src/ptychobench/inspect_data.py
+python src/ptychobench/commulearn/inspect_data.py
 ```
 
 **Output:**
@@ -112,7 +112,7 @@ Epsilon only needs one channel because its imaginary part is zero.
 ```python
 from torch.utils.data import DataLoader
 
-from dataset import PtychoDataset
+from ptychobench.commulearn.dataset import PtychoDataset
 
 training_data = PtychoDataset()
 train_dataloader = DataLoader(training_data, batch_size=16, shuffle=True)
@@ -147,7 +147,7 @@ The loss is a relative L2 loss (`LpLoss`), which normalises by the size of the t
 **Usage:**
 
 ```bash
-python src/ptychobench/train_fno.py
+python src/ptychobench/commulearn/train_fno.py
 ```
 
 **Output:**
@@ -169,13 +169,13 @@ A loss curve, a plot comparing predictions on trained and unseen data, and the t
 **Usage:**
 
 ```bash
-python src/ptychobench/compare_operators.py
+python src/ptychobench/commulearn/compare_operators.py
 ```
 
 The configuration and z-step can be given on the command line, which is easier than editing the file when you want several figures:
 
 ```bash
-python src/ptychobench/compare_operators.py 0 1
+python src/ptychobench/commulearn/compare_operators.py 0 1
 ```
 
 **Output:**

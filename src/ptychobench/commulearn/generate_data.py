@@ -1,18 +1,26 @@
-from ptychobench.grid import SimulationGrid  # Simulation Sandbox
-from ptychobench.samples import (
-    Apoferritin,  # Import a Sample
-    StraightWaveguides,
-    SharpStraightWaveguides,
-)
-from ptychobench.operators import (
-    ExactOperator,
-    FeitFleckOperator,
-)  # Import the Operators
-
-import numpy as np
 import torch
 
-from dataset import DATA_PATH
+from ptychobench.commulearn.dataset import DATA_PATH
+from ptychobench.grid import SimulationGrid  # Simulation Sandbox
+from ptychobench.operators import (
+    FeitFleckOperator,
+    GroundTruthOperator,
+)  # Import the Operators
+from ptychobench.samples import (
+    Apoferritin,  # Import a Sample
+    SharpStraightWaveguides,
+    StraightWaveguides,
+)
+
+
+def to_host(array):
+    """Copy a field into a host complex64 tensor, whatever backend produced it.
+
+    as_tensor rather than from_numpy, because a torch grid hands back tensors
+    rather than numpy arrays, and .cpu() because those tensors may be on the GPU
+    while the dataset buffers are not.
+    """
+    return torch.as_tensor(array).cpu().to(torch.complex64)
 
 
 def generate_data():
@@ -28,13 +36,16 @@ def generate_data():
     }
 
     # 2. Create a simulation grid
-    grid = SimulationGrid(**grid_params)
+    grid = SimulationGrid(**grid_params, backend="torch")
 
-    # Create an instance of the ExactOperator, for the ground truth
-    exact_operator = ExactOperator(grid)
+    # Set integrator
+    integrator = "direct"
+
+    # Create an instance of the GroundTruthOperator, for the ground truth
+    exact_operator = GroundTruthOperator(grid, integrator=integrator)
 
     # Create an instance of the FeitFleckOperator, for the classical baseline
-    feit_fleck_operator = FeitFleckOperator(grid)
+    feit_fleck_operator = FeitFleckOperator(grid, integrator=integrator)
 
     # Define inputs and targets for the model
     num_configs = 2  # How many times to draw a fresh set of random parameters
@@ -121,24 +132,24 @@ def generate_data():
             # 5. Get the sample's potential (epsilon) and the current wavefunction (psi)
             for z_index, z in enumerate(grid.z_steps):
                 eps = sample.get_permittivity(grid, z)  # Sample's potential at this z
-                E = np.diag(
-                    eps
-                )  # Turn epsilon into the environment matrix the operators expect
 
-                # 6. Store the input epsilon and psi
-                input_eps[idx] = torch.from_numpy(eps).to(torch.complex64)
-                input_psi[idx] = torch.from_numpy(psi).to(torch.complex64)
+                # 6. Store the input epsilon and psi, on the host whatever backend
+                #    the grid used
+                input_eps[idx] = to_host(eps)
+                input_psi[idx] = to_host(psi)
 
-                # 7. Compute the ground truth wavefunction using the ExactOperator
-                psi_exact = exact_operator.step(E, psi)
+                # 7. Compute the ground truth wavefunction using the GroundTruthOperator.
+                #    step() takes epsilon as a length-N vector or as diag(eps) and builds
+                #    whichever it needs, so pass the vector and skip the N x N matrix
+                psi_exact = exact_operator.step(eps, psi)
 
                 # 8. Compute the classical baseline using the FeitFleckOperator, stepped from
                 #    the same psi so the residual (exact - baseline) is well defined
-                psi_feit_fleck = feit_fleck_operator.step(E, psi)
+                psi_feit_fleck = feit_fleck_operator.step(eps, psi)
 
                 # 9. Store the target psi and the classical baseline
-                target_psi[idx] = torch.from_numpy(psi_exact).to(torch.complex64)
-                baseline_psi[idx] = torch.from_numpy(psi_feit_fleck).to(torch.complex64)
+                target_psi[idx] = to_host(psi_exact)
+                baseline_psi[idx] = to_host(psi_feit_fleck)
 
                 # 10. Label the row, so it can be found later without knowing the loop order
                 sample_names.append(type(sample).__name__)

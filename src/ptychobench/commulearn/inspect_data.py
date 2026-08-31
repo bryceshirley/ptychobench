@@ -14,7 +14,7 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
-from dataset import DATA_PATH
+from ptychobench.commulearn.dataset import DATA_PATH
 from ptychobench.grid import SimulationGrid
 
 SAVE_DIR = Path("scripts/results")
