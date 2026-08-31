@@ -17,6 +17,8 @@ dist/
 src/*.egg-info/
 .pytest_cache/
 .ruff_cache/
+.coverage
+site/
 .ipynb_checkpoints/
 .DS_Store
 .vscode/
@@ -32,3 +34,7 @@ src/*.egg-info/
 *.ipynb
 
 /scripts/
+
+# Ignore workplan and progress files
+workplan_prompt1.md
+progress.md

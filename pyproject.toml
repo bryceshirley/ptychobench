@@ -6,14 +6,13 @@ dependencies = [
     "numpy",
     "scipy",
     "matplotlib",
-    "ruff>=0.15.18",
-    "numba>=0.65.1",
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.7.6",
     "scikit-image>=0.25.2",
     "ipympl>=0.10.0",
     "h5py>=3.16.0",
     "torch>=2.12.1",
+    "array-api-compat>=1.15.0",
 ]
 requires-python = ">=3.10"
 
@@ -22,7 +21,9 @@ dev = [
     "ipykernel",
     "pytest",
     "pre-commit",
-    "ruff"
+    "ruff",
+    "pytest-cov>=7.1.0",
+    "ty>=0.0.75",
 ]
 
 [build-system]
@@ -31,3 +32,30 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# Docstrings follow the numpydoc standard:
+# https://numpydoc.readthedocs.io/en/latest/format.html
+# Enforced by the numpydoc-validation pre-commit hook over src/ only.
+[tool.numpydoc_validation]
+# "all" turns every check on; the codes after it are the ones turned back off.
+checks = [
+    "all",
+    # A See Also section and a worked Examples block are optional in the
+    # standard, and the docs site and the tutorial notebooks carry the worked
+    # examples for this package rather than the docstrings.
+    "SA01",
+    "EX01",
+    # An extended summary is optional too, and requiring one on every short
+    # helper is how docstrings turn into padding.
+    "ES01",
+]
+exclude = [
+    # numpydoc documents constructor parameters in the *class* docstring, so
+    # __init__ carrying its own would only duplicate it.
+    '\.__init__$',
+    # Dunder methods implement a language protocol whose contract is already
+    # fixed -- prose on ptychobench.utils.Array.__rtruediv__ would restate
+    # Python, not the code. __call__ is the one carrying real signature
+    # information, so it is left in.
+    '\.__(?!call__)[a-z_]+__$',
+]
