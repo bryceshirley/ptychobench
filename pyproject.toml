@@ -51,8 +51,6 @@ checks = [
     "ES01",
 ]
 exclude = [
-    # numpydoc documents constructor parameters in the *class* docstring, so
-    # __init__ carrying its own would only duplicate it.
     '\.__init__$',
     # Dunder methods implement a language protocol whose contract is already
     # fixed -- prose on ptychobench.utils.Array.__rtruediv__ would restate
@@ -60,11 +58,3 @@ exclude = [
     # information, so it is left in.
     '\.__(?!call__)[a-z_]+__$',
 ]
-
-# Type checking. commulearn is out of scope for the same reason it is out of
-# scope for numpydoc: the FNO pipeline is a set of scripts run top to bottom,
-# not library API, and the checker's complaints there are about script-style
-# imports and untyped PyTorch overrides rather than anything a reader of the
-# package would hit. Everything else in src/ and tests/ is still checked.
-[tool.ty.src]
-exclude = ["src/ptychobench/commulearn/"]

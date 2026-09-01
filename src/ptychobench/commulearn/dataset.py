@@ -23,9 +23,9 @@ class PtychoDataset(Dataset):
     def __len__(self):
         return len(self.psi_in)
 
-    def __getitem__(self, idx):
-        psi, eps = self.psi_in[idx], self.eps_in[idx]
-        psi_target = self.psi_target[idx]
+    def __getitem__(self, index):
+        psi, eps = self.psi_in[index], self.eps_in[index]
+        psi_target = self.psi_target[index]
         input_stacked = torch.stack([psi.real, psi.imag, eps.real])
         output_stacked = torch.stack([psi_target.real, psi_target.imag])
         return input_stacked, output_stacked

@@ -36,7 +36,16 @@ def generate_data():
     }
 
     # 2. Create a simulation grid
-    grid = SimulationGrid(**grid_params, backend="torch")
+    grid = SimulationGrid(
+        divergence_angle=grid_params["divergence_angle"],
+        lam=grid_params["lam"],
+        L=grid_params["L"],
+        z_prop=grid_params["z_prop"],
+        N=grid_params["N"],
+        Nz=grid_params["Nz"],
+        probe_width=grid_params["probe_width"],
+        backend="torch",
+    )
 
     # Set integrator
     integrator = "direct"

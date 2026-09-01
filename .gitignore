@@ -38,9 +38,5 @@ site/
 
 /scripts/
 
-# Ignore workplan and progress files
-workplan_prompt1.md
-progress.md
-
 # Ignore model weights and dataset tensors
 *.pt

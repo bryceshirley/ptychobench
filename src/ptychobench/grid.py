@@ -34,38 +34,8 @@ class SimulationGrid:
     Nz: int = 100  # Number of longitudinal steps (z-steps)
     probe_width: float = 5.0  # Width of the initial Gaussian beam
 
-    #: Which array library the *field* arrays are built with: ``"numpy"``,
-    #: ``"torch"`` or ``"cupy"``. A plain string rather than a namespace, so a
-    #: grid stays comparable, printable and easy to record alongside a result.
-    #: Switch with ``dataclasses.replace(grid, backend="torch")``.
-    #:
-    #: This governs :attr:`x`, :attr:`kx`, :attr:`propagating_mask`, the two
-    #: Fourier symbols and :meth:`get_initial_field` -- everything the
-    #: matrix-free path consumes. Two things deliberately stay on the host
-    #: whatever it is set to:
-    #:
-    #: * :attr:`z_steps`, which is a host-side propagation schedule driving a
-    #:   Python loop, not a field. Putting it on a GPU would only add a
-    #:   synchronising read per step.
-    #: * The dense O(N^2) matrices, because the ``"direct"`` integrator hands
-    #:   them to ``scipy.linalg.expm``/``sqrtm``, which are host-only. See
-    #:   :mod:`ptychobench.numerics.integrators`.
-    #:
-    #: :func:`ptychobench.benchmark.run_benchmark` runs end to end on any of
-    #: them: samples build their permittivity here too, and the histories it
-    #: records come back as host NumPy so metrics and plots never see a device
-    #: array. ``examples/full_backend_demo.py`` is a complete run on torch;
-    #: ``examples/backend_demo.py`` compares the backends against each other.
+    # Backend and device for the field arrays.
     backend: str = "numpy"
-
-    #: Which device to build the field arrays on: ``"cpu"``, ``"mps"``,
-    #: ``"cuda"``, or ``None`` (the default) for the backend's own choice --
-    #: the best accelerator present. Set it explicitly to pin a run to the host
-    #: for comparison, which separates a *library* difference from a *device*
-    #: one. See :attr:`resolved_device` for what it actually became.
-    #:
-    #: Precision follows the device, not just the library: torch on CPU is
-    #: float64, torch on MPS is float32, because Metal has no FP64.
     device: str | None = None
 
     # ---------------------------------------------------------

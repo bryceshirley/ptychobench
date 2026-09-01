@@ -44,3 +44,7 @@ jobs:
       # 6. Run the physics unit tests
       - name: Run Pytest
         run: uv run pytest
+      
+      # 7. Run the type checker
+      - name: Run Type Checker
+        run: uv run ty check .
