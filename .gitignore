@@ -11,7 +11,10 @@ wheels/
 .venv
 
 results/
+# mkdocs build output
+site/
 build/
+wandb
 dist/
 *.egg-info/
 src/*.egg-info/
@@ -35,6 +38,5 @@ site/
 
 /scripts/
 
-# Ignore workplan and progress files
-workplan_prompt1.md
-progress.md
+# Ignore model weights and dataset tensors
+*.pt
