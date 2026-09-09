@@ -1,9 +1,12 @@
 """
 Issue #56: compare the trained FNO against the classical operators.
 
-    1. Reproduce the dataset_check plots, with the FNO prediction alongside
-       the exact solution and the Feit/Fleck baseline.
+    1. Reproduce the benchmark plots, with the FNO alongside the exact solution
+       and the classical operators.
     2. Plot the error between the ground truth and each operator.
+
+The FNO joins the run as one more entry in the result's wavefield history, so the
+figures come from :mod:`ptychobench.plotting` and nothing is drawn here.
 
 Run generate_data.py and then train_fno.py first: this script plots the model
 that train_fno.py trained and saved, it does not train one of its own.
@@ -11,30 +14,43 @@ that train_fno.py trained and saved, it does not train one of its own.
 
 import sys
 from pathlib import Path
+from typing import Any, Mapping, Sequence
 
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from torch.utils.data import random_split
 
-from ptychobench.commulearn.dataset import DATA_PATH, PtychoDataset
+import ptychobench.samples as samples_module
+from ptychobench.benchmark import run_benchmark
+from ptychobench.commulearn.dataset import DATA_PATH
+from ptychobench.commulearn.train_fno import CONFIG as TRAINING_CONFIG
+from ptychobench.commulearn.train_fno import TrainingConfig, build_model
 from ptychobench.grid import SimulationGrid
-from ptychobench.commulearn.train_fno import (
-    BATCH_SIZE,
-    SPLIT_SEED,
-    WEIGHTS_PATH,
-    build_model,
+from ptychobench.numerics.metrics import (
+    calculate_farfield_wave,
+    calculate_max_error,
+    calculate_rmse,
 )
+from ptychobench.operators import FeitFleckOperator, ForwardOperator
+from ptychobench.plotting import (
+    plot_evolution_1D,
+    plot_farfield_error,
+    plot_sample,
+)
+from ptychobench.results import BenchmarkResult
+from ptychobench.samples import Sample
 
 SAVE_DIR = Path("scripts/results")
 
-CONFIG = 0  # Which of the num_configs configurations to plot, overridable on the command line
-Z_STEP = 0  # Which z-step of that configuration to plot
+#: The key the FNO's trajectory is filed under, alongside the operator class names.
+FNO_NAME = "FNOOperator"
+
+CONFIG = 0  # Which of the num_configs configurations to plot
+Z_STEP = 0  # Which z-step of that configuration to label as trained or unseen
 
 
-def find_rows(data, config, z_step):
+def find_rows(data: Mapping[str, Any], config: int, z_step: int) -> list[int]:
     """
-    Returns the row index of every sample type at one configuration and z-step.
+    Return the row index of every sample type at one configuration and z-step.
 
     Reads the labels generate_data.py stored, so it does not depend on the order
     the generation loops happened to run in.
@@ -46,111 +62,193 @@ def find_rows(data, config, z_step):
     ]
 
 
-def load_trained_model():
-    """Loads the model train_fno.py trained, so both scripts report the same model."""
-    if not WEIGHTS_PATH.exists():
+def rebuild_sample(data: Mapping[str, Any], row: int) -> Sample:
+    """
+    Rebuild the sample a row was generated from, so run_benchmark can rerun it.
+
+    generate_data.py records the class name and the constructor arguments, which
+    is everything the sample needs to come back identical.
+    """
+    sample_class = getattr(samples_module, data["sample_names"][row])
+    return sample_class(**data["sample_params"][row])
+
+
+def load_trained_model(config: TrainingConfig = TRAINING_CONFIG):
+    """Load the model train_fno.py trained, so both scripts report the same one."""
+    if not config.weights_path.exists():
         raise FileNotFoundError(
-            f"No weights at {WEIGHTS_PATH}. Run train_fno.py first to train and save a model."
+            f"No weights at {config.weights_path}. Run train_fno.py first."
         )
 
-    model = build_model()
-    # The FNO's state_dict stores neuralop objects, too many to allowlist one by one,
-    # so fall back to full pickle. Safe here: train_fno.py wrote this file on this machine
-    model.load_state_dict(torch.load(WEIGHTS_PATH, weights_only=False))
-    print(f"Loaded the model trained by train_fno.py from {WEIGHTS_PATH}")
+    model = build_model(config)
+    # The FNO's state_dict stores neuralop objects, too many to allowlist one by
+    # one, so fall back to full pickle. Safe here: train_fno.py wrote this file
+    model.load_state_dict(torch.load(config.weights_path, weights_only=False))
+    print(f"Loaded the model trained by train_fno.py from {config.weights_path}")
     return model
 
 
-def predict(model, dataset, row):
-    """Runs one dataset row through the FNO and rebuilds a complex wavefield."""
-    features, _ = dataset[row]
+def fno_step(model, psi: Any, eps: Any) -> np.ndarray:
+    """
+    Advance the field by one step with the FNO.
+
+    The counterpart of :meth:`~ptychobench.operators.ForwardOperator.step`, but
+    taking the field and the permittivity stacked as real channels rather than an
+    environment matrix, because that is what the network was trained on.
+    """
+    psi = np.asarray(torch.as_tensor(psi).cpu())
+    eps = np.asarray(torch.as_tensor(eps).cpu())
+
+    stacked = torch.stack(
+        [
+            torch.from_numpy(np.real(psi)).float(),
+            torch.from_numpy(np.imag(psi)).float(),
+            torch.from_numpy(np.real(eps)).float(),
+        ]
+    ).unsqueeze(0)
+
     model.eval()
     with torch.no_grad():
-        prediction = model(features.unsqueeze(0))[0]
-    return (prediction[0] + 1j * prediction[1]).numpy()
+        prediction = model(stacked)[0]
+
+    return (prediction[0] + 1j * prediction[1]).numpy().astype(complex)
 
 
-def compare(path=DATA_PATH, config=CONFIG, z_step=Z_STEP):
-    data = torch.load(path)  # fetch complex wavefields and eps tensorsfor plotting
-    dataset = PtychoDataset(path)  # fetch real tensors for FNO input and output
+def fno_history(model, grid: SimulationGrid, sample: Sample) -> np.ndarray:
+    """
+    Propagate the FNO through the whole sample, one step at a time.
 
+    Chaining single-step predictions is what makes the FNO comparable with the
+    classical operators, which run_benchmark applies the same way. It also lets
+    any error compound along z, as it does for them.
+
+    Returns
+    -------
+    numpy.ndarray
+        The ``(Nz, N)`` trajectory, recorded at the start of each step to match
+        the convention run_benchmark records the classical operators with.
+    """
+    psi = np.asarray(torch.as_tensor(grid.get_initial_field()).cpu())
+    history = np.empty((grid.Nz, grid.N), dtype=complex)
+
+    for i, z in enumerate(grid.z_steps):
+        history[i] = psi
+        psi = fno_step(model, psi, sample.get_permittivity(grid, z))
+
+    return history
+
+
+def _measure(histories: Mapping[str, np.ndarray]) -> tuple[dict, dict, dict]:
+    """
+    Measure every trajectory against the reference, the way run_benchmark does.
+
+    Recomputed rather than reused, because run_benchmark worked its metrics out
+    before the FNO joined the result.
+    """
+    reference = histories[BenchmarkResult.REFERENCE]
+    reference_intensity = calculate_farfield_wave(reference[-1, :], mode="intensity")
+
+    rmse_wavefield, rmse_detector, max_error_detector = {}, {}, {}
+    for name, history in histories.items():
+        intensity = calculate_farfield_wave(history[-1, :], mode="intensity")
+        rmse_wavefield[name] = calculate_rmse(reference.ravel(), history.ravel())
+        rmse_detector[name] = calculate_rmse(reference_intensity, intensity)
+        max_error_detector[name] = calculate_max_error(reference_intensity, intensity)
+
+    return rmse_wavefield, rmse_detector, max_error_detector
+
+
+def benchmark_with_fno(
+    grid: SimulationGrid,
+    sample: Sample,
+    model,
+    operators: Sequence[type[ForwardOperator]] = (FeitFleckOperator,),
+) -> BenchmarkResult:
+    """
+    Run the classical benchmark, then add the FNO as one more operator.
+
+    Adding its trajectory to the result is what lets every figure come from
+    ptychobench.plotting: those functions walk the wavefield history, so the FNO
+    is drawn beside the classical operators without a line of plotting here.
+    """
+    result = run_benchmark(grid, sample, list(operators))
+
+    result.wavefield_history[FNO_NAME] = fno_history(model, grid, sample)
+    result.display_names[FNO_NAME] = "FNO"
+
+    rmse_wavefield, rmse_detector, max_error_detector = _measure(
+        result.wavefield_history
+    )
+    result.rmse_wavefield = rmse_wavefield
+    result.rmse_detector = rmse_detector
+    result.max_error_detector = max_error_detector
+    return result
+
+
+def compare(
+    path: Path = DATA_PATH,
+    config: int = CONFIG,
+    z_step: int = Z_STEP,
+    save_dir: Path = SAVE_DIR,
+) -> None:
+    """
+    Compare the FNO against the classical operators, one figure set per sample.
+
+    Parameters
+    ----------
+    path : pathlib.Path, optional
+        The dataset to read the sample parameters back from.
+    config : int, optional
+        Which draw of random parameters to plot.
+    z_step : int, optional
+        Which z-step decides whether a sample is labelled trained or unseen.
+    save_dir : pathlib.Path, optional
+        Where the figures are written.
+    """
+    data = torch.load(path, weights_only=False)
     grid = SimulationGrid(**data["grid_params"])
-    eps, psi_exact, psi_baseline = (
-        data["input_eps"],
-        data["target_psi"],
-        data["baseline_psi"],
-    )
-
-    # Reproduce the split train_fno.py uses, obtain the 8 rows of trained dataset so each row can be labelled
-    generator = torch.Generator().manual_seed(SPLIT_SEED)
-    train_set, _ = random_split(
-        dataset, [BATCH_SIZE, len(dataset) - BATCH_SIZE], generator=generator
-    )
-    train_indices = set(train_set.indices)
-
     model = load_trained_model()
 
-    rows = find_rows(data, config, z_step)
-    fig, axes = plt.subplots(len(rows), 4, figsize=(25, 3.4 * len(rows)))
-    fig.suptitle(
-        f"Operator comparison - configuration {config}, z-step {z_step}", fontsize=14
+    # Reproduce the split train_fno.py used, so each sample can be labelled
+    generator = torch.Generator().manual_seed(TRAINING_CONFIG.split_seed)
+    trained_rows = set(
+        torch.randperm(len(data["sample_names"]), generator=generator)[
+            : TRAINING_CONFIG.batch_size
+        ].tolist()
     )
 
-    print(f"\n{'sample':24}  {'seen?':7}  {'Feit/Fleck':>11}  {'FNO':>11}")
-    for sample_type, row in enumerate(rows):
+    save_dir.mkdir(parents=True, exist_ok=True)
+    print(f"\n{'sample':24}  {'seen?':8}  {'Feit/Fleck':>12}  {'FNO':>12}")
+
+    for row in find_rows(data, config, z_step):
+        sample = rebuild_sample(data, row)
         name = data["sample_names"][row]
+        seen = "trained" if row in trained_rows else "unseen"
 
-        exact = psi_exact[row].numpy()
-        feit_fleck = psi_baseline[row].numpy()
-        fno = predict(model, dataset, row)
-        seen = "trained" if row in train_indices else "unseen"
-
-        ff_error = np.abs(exact - feit_fleck)
-        fno_error = np.abs(exact - fno)
+        result = benchmark_with_fno(grid, sample, model)
         print(
-            f"{name:24}  {seen:7}  "
-            f"{np.linalg.norm(exact - feit_fleck) / np.linalg.norm(exact):11.4f}  "
-            f"{np.linalg.norm(exact - fno) / np.linalg.norm(exact):11.4f}"
+            f"{name:24}  {seen:8}  "
+            f"{result.rmse_wavefield['FeitFleckOperator']:12.4e}  "
+            f"{result.rmse_wavefield[FNO_NAME]:12.4e}"
         )
 
-        # Column 0: the sample the beam passes through
-        ax = axes[sample_type, 0]
-        ax.plot(grid.x, np.abs(eps[row].numpy()))
-        ax.set_title(f"{name}: |eps(x)|")
+        # 1. The wavefields, with the FNO drawn alongside the classical operators
+        phase, amplitude = plot_evolution_1D(result)
+        # 2. The error of each operator against the ground truth
+        error = plot_farfield_error(result, log_scale=True)
+        sample_figure = plot_sample(result)
 
-        # Column 1: magnitude of each operator's prediction
-        ax = axes[sample_type, 1]
-        ax.plot(grid.x, np.abs(exact), label="exact")
-        ax.plot(grid.x, np.abs(feit_fleck), "--", label="Feit/Fleck")
-        ax.plot(grid.x, np.abs(fno), ":", label="FNO")
-        ax.set_title(f"{name}: |psi|  ({seen})")
-        ax.legend(fontsize=8)
+        for label, figure in [
+            ("evolution_phase", phase),
+            ("evolution_amplitude", amplitude),
+            ("farfield_error", error),
+            ("sample", sample_figure),
+        ]:
+            figure.suptitle(f"{name} ({seen})")
+            figure.savefig(save_dir / f"{name}_{label}.png", dpi=150)
+            figure.clf()
 
-        # Column 2: the phase, where most of the Feit/Fleck error lives
-        ax = axes[sample_type, 2]
-        ax.plot(grid.x, np.angle(exact), label="exact")
-        ax.plot(grid.x, np.angle(feit_fleck), "--", label="Feit/Fleck")
-        ax.plot(grid.x, np.angle(fno), ":", label="FNO")
-        ax.set_title(f"{name}: arg(psi)  [rad]")
-        ax.legend(fontsize=8)
-
-        # Column 3: how far each operator is from the ground truth
-        ax = axes[sample_type, 3]
-        ax.semilogy(grid.x, ff_error, "--", label="|exact - Feit/Fleck|")
-        ax.semilogy(grid.x, fno_error, ":", label="|exact - FNO|")
-        ax.set_title(f"{name}: error against ground truth")
-        ax.legend(fontsize=8)
-
-        for col in range(4):
-            axes[sample_type, col].set_xlabel("x (nm)")
-            axes[sample_type, col].grid(alpha=0.3)
-
-    fig.tight_layout()
-    save_path = SAVE_DIR / f"operator_comparison_config{config}_zstep{z_step}.png"
-    save_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(save_path, dpi=150)
-    plt.close(fig)
-    print(f"\nSaved comparison to {save_path}")
+    print(f"\nSaved the figures to {save_dir}")
 
 
 if __name__ == "__main__":
